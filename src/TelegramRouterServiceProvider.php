@@ -4,6 +4,7 @@ namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Support\ServiceProvider;
 use ReyhanTeam\TelegramBotRouter\Console\SetPostRouteCommand;
+use Illuminate\Support\Facades\Route;
 
 class TelegramRouterServiceProvider extends ServiceProvider
 {
