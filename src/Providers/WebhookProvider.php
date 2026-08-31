@@ -1,7 +1,8 @@
 <?php
+
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
-use Illuminate\Support\Facades\Log;
+use ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
 class WebhookProvider
@@ -15,11 +16,17 @@ class WebhookProvider
 
     public function start()
     {
-        $update = json_decode(file_get_contents('php://input'), true);
+        $raw = file_get_contents('php://input');
+        $update = json_decode($raw, true);
 
-        if ($update) {
-            $update = TelegramUpdate::fromArray($update);
-            $this->router->dispatch($update);
+        if (!is_array($update) || json_last_error() !== JSON_ERROR_NONE) {
+            throw new InvalidTelegramUpdateException('Invalid JSON received from Telegram.');
         }
+
+        if (!isset($update['update_id'])) {
+            throw new InvalidTelegramUpdateException('Telegram update_id is missing.');
+        }
+
+        $this->router->dispatch(TelegramUpdate::fromArray($update));
     }
 }
