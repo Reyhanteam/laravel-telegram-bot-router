@@ -74,6 +74,16 @@ class ConversationManager
         return $this->get($update)['data'] ?? [];
     }
 
+    public function cancel(TelegramUpdate $update): bool
+    {
+        if (! $this->active($update)) {
+            return false;
+        }
+
+        $this->forget($update);
+        return true;
+    }
+
     public function forget(TelegramUpdate $update): void
     {
         cache()->forget($this->key($update));
