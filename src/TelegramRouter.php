@@ -58,17 +58,30 @@ class TelegramRouter
 
         $matchedRoute = null;
         $matchedScore = -1;
+        $matchedMatches = null;
+        $matchedRouteParameters = [];
+        $matchedCommandArguments = [];
 
         foreach (TelegramBot::getRoutes() as $route) {
+            $update->matches = null;
+            $update->routeParameters = [];
+            $update->commandArguments = [];
+
             $score = $this->routeMatchScore($route, $update);
 
             if ($score > $matchedScore) {
                 $matchedRoute = $route;
                 $matchedScore = $score;
+                $matchedMatches = $update->matches;
+                $matchedRouteParameters = $update->routeParameters;
+                $matchedCommandArguments = $update->commandArguments;
             }
         }
 
         if ($matchedRoute !== null) {
+            $update->matches = $matchedMatches;
+            $update->routeParameters = $matchedRouteParameters;
+            $update->commandArguments = $matchedCommandArguments;
             $this->execute($matchedRoute, $update);
             return;
         }
@@ -168,36 +181,42 @@ class TelegramRouter
             return null;
         }
 
-        $compiled = preg_quote(trim($pattern), '/');
         $names = [];
+        $compiled = '';
+        $offset = 0;
 
-        $compiled = preg_replace_callback(
-            '/\\\\\{([A-Za-z_][A-Za-z0-9_]*)\\\\\}/',
-            function (array $match) use (&$names): string {
-                $name = $match[1];
-                $names[] = $name;
-                return '(?P<'.$name.'>[^\\s]+)';
-            },
-            $compiled
-        );
+        preg_match_all('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', $pattern, $matches, PREG_OFFSET_CAPTURE);
 
-        if ($compiled === null || $names === []) {
+        foreach ($matches[0] ?? [] as $index => $placeholder) {
+            $token = $placeholder[0];
+            $position = $placeholder[1];
+            $name = $matches[1][$index][0];
+
+            $compiled .= preg_quote(substr($pattern, $offset, $position - $offset), '/');
+            $compiled .= '(?P<'.$name.'>[^\\s]+)';
+            $names[] = $name;
+            $offset = $position + strlen($token);
+        }
+
+        if ($names === []) {
             return null;
         }
 
-        $result = @preg_match('/^'.$compiled.'$/u', $text, $matches);
+        $compiled .= preg_quote(substr($pattern, $offset), '/');
+
+        $result = @preg_match('/^'.$compiled.'$/u', $text, $routeMatches);
 
         if ($result !== 1) {
             return null;
         }
 
-        if (!$this->constraintsMatch($constraints, $matches)) {
+        if (!$this->constraintsMatch($constraints, $routeMatches)) {
             return null;
         }
 
         $parameters = [];
         foreach ($names as $name) {
-            $parameters[$name] = $matches[$name];
+            $parameters[$name] = $routeMatches[$name];
         }
 
         return $parameters;
