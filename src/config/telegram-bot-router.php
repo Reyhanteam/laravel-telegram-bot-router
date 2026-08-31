@@ -17,8 +17,15 @@ return [
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
     ],
 
+    'middleware' => [
+        'aliases' => [
+            // 'admin' => App\Telegram\Middleware\IsAdmin::class,
+        ],
+    ],
+
     'conversation' => [
         'ttl' => (int) env('TELEGRAM_CONVERSATION_TTL', 3600),
+        'cache_store' => env('TELEGRAM_CONVERSATION_CACHE_STORE', null),
     ],
 
 ];
