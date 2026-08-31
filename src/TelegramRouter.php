@@ -107,12 +107,17 @@ class TelegramRouter
 
                 $parts = preg_split('/\s+/', $text, 2);
                 $command = $parts[0] ?? '';
+                $argumentText = $parts[1] ?? '';
 
                 if (str_contains($command, '@')) {
                     $command = explode('@', $command, 2)[0];
                 }
 
                 if ($command !== $pattern) return -1;
+
+                $update->commandArguments = $argumentText === ''
+                    ? []
+                    : preg_split('/\s+/', $argumentText);
 
                 return empty($constraints) ? 100 : -1;
 
@@ -207,13 +212,16 @@ class TelegramRouter
 
     protected function resolveAction($action, TelegramUpdate $update)
     {
-        if ($action instanceof \Closure) return $action($update);
+        if ($action instanceof \Closure) return $action($update, ...$update->commandArguments());
         if (is_array($action) && count($action) === 2) {
             [$controller, $method] = $action;
             if (!is_string($controller) || !class_exists($controller)) throw new \InvalidArgumentException("Telegram route controller [{$controller}] was not found. Check routes/bot.php.");
             if (!is_string($method) || !method_exists($controller, $method)) throw new \InvalidArgumentException("Telegram route method [{$method}] was not found on [{$controller}].");
             $instance = app()->make($controller);
-            return app()->call([$instance, $method], ['update' => $update]);
+            return app()->call([$instance, $method], [
+                'update' => $update,
+                'arguments' => $update->commandArguments(),
+            ]);
         }
         throw new \InvalidArgumentException('Invalid Telegram route action provided.');
     }
