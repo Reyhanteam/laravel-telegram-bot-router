@@ -4,6 +4,7 @@ namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
 use Throwable;
 
 class TelegramRouter
@@ -62,12 +63,20 @@ class TelegramRouter
         }
 
         if ($fallback = TelegramBot::getFallback()) {
-            $this->execute(['callback' => $fallback, 'pattern' => 'fallback'], $update);
+            $this->execute([
+                'callback' => $fallback,
+                'pattern' => 'fallback',
+                'middleware' => [],
+            ], $update);
             return;
         }
 
         if ($onInvalid = TelegramBot::getOnInvalid()) {
-            $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid'], $update);
+            $this->execute([
+                'callback' => $onInvalid,
+                'pattern' => 'onInvalid',
+                'middleware' => [],
+            ], $update);
             return;
         }
 
@@ -184,7 +193,6 @@ class TelegramRouter
             }
 
             if ($char === $delimiter) {
-                // Everything after the closing delimiter must be valid modifiers.
                 $modifiers = substr($pattern, $i + 1);
                 return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1;
             }
@@ -196,7 +204,16 @@ class TelegramRouter
     protected function execute(array $route, TelegramUpdate $update): void
     {
         try {
-            $this->resolveAction($route['callback'], $update);
+            $middleware = array_merge(
+                TelegramBot::getGlobalMiddleware(),
+                $route['middleware'] ?? []
+            );
+
+            $destination = function (TelegramUpdate $update) use ($route): mixed {
+                return $this->resolveAction($route['callback'], $update);
+            };
+
+            (new MiddlewarePipeline($middleware))->process($update, $destination);
         } catch (Throwable $e) {
             Log::error('Route execution failed', [
                 'pattern' => $route['pattern'] ?? 'fallback',
