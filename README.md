@@ -28,6 +28,7 @@ routes/bot.php  -> Telegram bot routes
 - ✅ Improved route matching
 - ✅ Route constraints
 - ✅ Command arguments
+- ✅ Route parameters
 - ✅ Route middleware
 - ✅ Global middleware
 - ✅ Middleware groups and nested groups
@@ -140,6 +141,8 @@ Current priority:
 ```text
 Exact command/text match
         ↓
+Route parameter match
+        ↓
 Regular expression match
         ↓
 Generic callback-query route
@@ -150,15 +153,18 @@ Example:
 ```php
 BOT::onText('/^hello/i', [MessageController::class, 'generic']);
 BOT::onText('hello', [MessageController::class, 'exact']);
+BOT::onText('hello {name}', [MessageController::class, 'named']);
 ```
 
 For `hello`, the exact route wins.
+
+For `hello Hossein`, the named-parameter route can match.
 
 When routes have the same score, registration order is used as the tie-breaker.
 
 ## Command Arguments
 
-Text after a command is split into positional arguments.
+Text after a command is available as positional arguments.
 
 ```text
 /start Hossein
@@ -211,16 +217,152 @@ BOT::onCommand('start', function ($update, ...$arguments) {
 });
 ```
 
-At this stage arguments are positional. Named placeholders such as `{id}` are part of the next Route Parameters feature.
+Command arguments are positional. Named values can instead use Route Parameters.
+
+## Route Parameters
+
+Route Parameters let a route define named placeholders with `{name}` syntax.
+
+### Command Parameters
+
+```php
+BOT::onCommand('user {id}', [UserController::class, 'show']);
+```
+
+Telegram message:
+
+```text
+/user 123
+```
+
+The router matches the route and captures:
+
+```php
+[
+    'id' => '123',
+]
+```
+
+The value is available through `TelegramUpdate`:
+
+```php
+$id = $update->routeParameter('id');
+```
+
+Or all parameters:
+
+```php
+$parameters = $update->routeParameters();
+```
+
+Controller methods can receive named parameters through Laravel's Service Container:
+
+```php
+public function show($update, $id)
+{
+    // $id === '123'
+}
+```
+
+### Multiple Parameters
+
+```php
+BOT::onCommand('user {id} {section}', [UserController::class, 'show']);
+```
+
+For:
+
+```text
+/user 123 profile
+```
+
+parameters are:
+
+```php
+[
+    'id' => '123',
+    'section' => 'profile',
+]
+```
+
+### Text Parameters
+
+Parameters can also be used with text routes:
+
+```php
+BOT::onText('hello {name}', [MessageController::class, 'hello']);
+```
+
+For:
+
+```text
+hello Hossein
+```
+
+`name` is captured as `Hossein`.
+
+Parameters match one non-whitespace segment. Use a regular expression route when more advanced text matching is required.
+
+### Parameters and Constraints
+
+Route Parameters work together with Route Constraints:
+
+```php
+BOT::onCommand('user {id}', [UserController::class, 'show'])
+    ->whereNumber('id');
+```
+
+Therefore:
+
+```text
+/user 123    -> matched
+/user 4567   -> matched
+/user abc    -> not matched
+```
+
+### Route Parameter vs Command Argument
+
+Use Command Arguments when the command accepts general positional values:
+
+```php
+BOT::onCommand('search', [SearchController::class, 'search']);
+```
+
+Use Route Parameters when a value has a specific name and belongs to the route definition:
+
+```php
+BOT::onCommand('user {id}', [UserController::class, 'show']);
+```
+
+Command arguments:
+
+```text
+/search phone android
+```
+
+Route parameters:
+
+```text
+/user 123
+```
+
+A route can use both mechanisms. Named route parameters are exposed separately through `routeParameters()`.
 
 ## Route Constraints
 
-Constraints validate named captures from regular-expression routes.
+Constraints validate named captures from regular-expression routes and Route Parameters.
 
 ### Number
 
 ```php
 BOT::onText('/^user (?<id>[^ ]+)$/', [UserController::class, 'show'])
+    ->whereNumber('id');
+```
+
+The same constraint works with Route Parameters:
+
+```php
+BOT::onCommand('user {id}', [UserController::class, 'show'])
     ->whereNumber('id');
 ```
 
@@ -251,23 +393,12 @@ BOT::onText('/^user (?<id>[^ ]+)$/', [UserController::class, 'show'])
 Multiple constraints can be chained:
 
 ```php
-BOT::onText(
-    '/^user (?<id>[^ ]+) (?<section>[^ ]+)$/',
-    [UserController::class, 'show']
-)
+BOT::onCommand('user {id} {section}', [UserController::class, 'show'])
     ->whereNumber('id')
     ->whereIn('section', ['profile', 'settings']);
 ```
 
 If a constraint fails, the route is treated as not matched and the router can try another route or the fallback.
-
-Captured values are available through:
-
-```php
-$update->matches['id'];
-```
-
-> **Current limitation:** constraints use named regular-expression captures. Automatic `{id}` placeholder parameters are planned under Route Parameters.
 
 ## Controllers and Dependency Injection
 
@@ -286,6 +417,15 @@ public function index(MyService $service, $update, array $arguments)
 }
 ```
 
+Route parameters are also passed by name:
+
+```php
+public function show(MyService $service, $update, $id)
+{
+    // ...
+}
+```
+
 ## TelegramUpdate
 
 Useful methods:
@@ -297,6 +437,8 @@ $update->messageId();
 $update->text();
 $update->callbackQueryData();
 $update->commandArguments();
+$update->routeParameters();
+$update->routeParameter('id');
 $update->originalUpdate();
 ```
 
@@ -568,7 +710,7 @@ Webhook and Polling use the same Telegram routing layer.
 - [x] Better route matching
 - [x] Route constraints
 - [x] Command arguments
-- [ ] Route parameters
+- [x] Route parameters
 
 ## 🔴 Priority 2 — Middleware ⭐
 
