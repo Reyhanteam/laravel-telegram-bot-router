@@ -3,6 +3,7 @@
 namespace ReyhanTeam\TelegramBotRouter\Middleware;
 
 use Closure;
+use ReyhanTeam\TelegramBotRouter\TelegramBot;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 use RuntimeException;
 
@@ -49,12 +50,13 @@ class MiddlewarePipeline
             ));
         }
 
-        [$class, $parameters] = $this->parseMiddleware($middleware);
+        [$name, $parameters] = $this->parseMiddleware($middleware);
+        $class = TelegramBot::resolveMiddlewareAlias($name) ?? $name;
 
         if (!class_exists($class)) {
             throw new RuntimeException(sprintf(
                 'Telegram middleware [%s] could not be resolved.',
-                $class
+                $name
             ));
         }
 
