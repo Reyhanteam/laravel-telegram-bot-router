@@ -5,6 +5,7 @@ namespace ReyhanTeam\TelegramBotRouter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager;
+use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
 use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
 use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler;
@@ -38,6 +39,9 @@ class TelegramRouter
         event(new UpdateReceived($this->update));
         if (isset($this->update->message)) {
             event(new MessageReceived($this->update));
+            if (isset($this->update->message->text) && str_starts_with(trim((string) $this->update->message->text), '/')) {
+                event(new CommandReceived($this->update));
+            }
         }
         try { $this->dispatch($this->update); } catch (Throwable $e) { $this->handleException($e, ['source' => 'router']); }
         return response()->json(['ok' => true]);
