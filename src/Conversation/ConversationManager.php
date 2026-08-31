@@ -7,6 +7,7 @@ use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationCancelled;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationFinished;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationStarted;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationStepCompleted;
+use ReyhanTeam\TelegramBotRouter\TelegramBot;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
 
@@ -26,7 +27,6 @@ class ConversationManager
             'expires_at' => time() + $ttl,
         ];
 
-        $this->registerSteps($name, $steps);
         $this->put($update, $conversation, $ttl, $cacheStore);
         event(new ConversationStarted($update, $name, $data));
     }
@@ -137,10 +137,14 @@ class ConversationManager
 
     protected function resolveAction($action, TelegramUpdate $update, array $data): mixed
     {
-        $input = new ConversationInput($update);
+        $input = new ConversationInput($update, $data);
 
         if ($action instanceof Closure) {
-            return $action($update, $data, $input);
+            return app()->call($action, [
+                'update' => $update,
+                'input' => $input,
+                'data' => $data,
+            ]);
         }
 
         if (is_array($action) && count($action) === 2) {
@@ -157,15 +161,9 @@ class ConversationManager
         throw new \InvalidArgumentException('Invalid Telegram conversation step action.');
     }
 
-    protected function registerSteps(string $name, array $steps): void
-    {
-        static::$steps[$name] = $steps;
-    }
-
     protected function steps(string $name): array
     {
-        return static::$steps[$name] ?? [];
+        $conversation = TelegramBot::getConversations()[$name] ?? null;
+        return is_array($conversation) ? ($conversation['steps'] ?? []) : [];
     }
-
-    protected static array $steps = [];
 }
