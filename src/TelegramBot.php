@@ -16,6 +16,7 @@ class TelegramBot
     protected static ?Container $app = null;
     protected static array $routes = [];
     protected static array $globalMiddleware = [];
+    protected static array $middlewareAliases = [];
     protected static array $middlewareGroupStack = [];
     protected static array $conversations = [];
     protected static $fallback = null;
@@ -44,6 +45,28 @@ class TelegramBot
     public static function globalMiddleware(array $middleware): void
     {
         static::$globalMiddleware = $middleware;
+    }
+
+    public static function aliasMiddleware(string $name, string $middleware): void
+    {
+        static::$middlewareAliases[$name] = $middleware;
+    }
+
+    public static function aliasMiddlewares(array $aliases): void
+    {
+        foreach ($aliases as $name => $middleware) {
+            static::aliasMiddleware((string) $name, $middleware);
+        }
+    }
+
+    public static function getMiddlewareAliases(): array
+    {
+        return static::$middlewareAliases;
+    }
+
+    public static function resolveMiddlewareAlias(string $name): ?string
+    {
+        return static::$middlewareAliases[$name] ?? null;
     }
 
     public static function group(array $middleware, Closure $routes): void
