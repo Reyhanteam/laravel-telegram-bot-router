@@ -2,6 +2,7 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
+use ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 use Throwable;
@@ -36,8 +37,8 @@ class PollingProvider
                 $updates = $this->getUpdates($offset);
 
                 foreach ($updates as $update) {
-                    if (!isset($update['update_id'])) {
-                        continue;
+                    if (!is_array($update) || !isset($update['update_id'])) {
+                        throw new InvalidTelegramUpdateException('Telegram polling response contained an invalid update.');
                     }
 
                     echo 'New update received: '.$update['update_id'].PHP_EOL;
@@ -57,7 +58,6 @@ class PollingProvider
     private function getUpdates(int $offset): array
     {
         $url = $this->apiUrl.'/bot'.$this->token.'/getUpdates?offset='.$offset.'&timeout='.$this->timeout;
-
         $ch = curl_init($url);
 
         if ($ch === false) {
@@ -84,7 +84,6 @@ class PollingProvider
 
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
         $data = json_decode($response, true);
 
         if (!is_array($data) || !isset($data['ok'])) {
