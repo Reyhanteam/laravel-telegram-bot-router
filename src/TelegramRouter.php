@@ -4,13 +4,13 @@ namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager;
 use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
 use Throwable;
 
 class TelegramRouter
 {
     protected ?Request $request;
-
     protected TelegramUpdate $update;
 
     public function __construct(?Request $request = null)
@@ -53,6 +53,10 @@ class TelegramRouter
 
     public function dispatch(TelegramUpdate $update): void
     {
+        if (app(ConversationManager::class)->handle($update)) {
+            return;
+        }
+
         foreach (TelegramBot::getRoutes() as $route) {
             if (!$this->routeMatches($route, $update)) {
                 continue;
