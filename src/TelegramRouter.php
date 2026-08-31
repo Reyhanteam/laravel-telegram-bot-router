@@ -116,10 +116,13 @@ class TelegramRouter
 
                 if (str_contains($command, '@')) {
                     $command = explode('@', $command, 2)[0];
+                    $normalizedText = $command.($argumentText === '' ? '' : ' '.$argumentText);
+                } else {
+                    $normalizedText = $text;
                 }
 
                 if (!empty($parameters)) {
-                    $match = $this->matchRouteParameters($pattern, $text, $constraints);
+                    $match = $this->matchRouteParameters($pattern, $normalizedText, $constraints);
 
                     if ($match === null) return -1;
 
