@@ -5,6 +5,7 @@ namespace ReyhanTeam\TelegramBotRouter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager;
+use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRouteException;
 use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
 use Throwable;
 
@@ -156,7 +157,16 @@ class TelegramRouter
     protected function execute(array $route, TelegramUpdate $update): void
     {
         try { $middleware = array_merge(TelegramBot::getGlobalMiddleware(), $route['middleware'] ?? []); $destination = fn (TelegramUpdate $update): mixed => $this->resolveAction($route['callback'], $update); (new MiddlewarePipeline($middleware))->process($update, $destination); }
-        catch (Throwable $e) { Log::error('Route execution failed', ['pattern' => $route['pattern'] ?? 'fallback', 'error' => $e->getMessage()]); throw $e; }
+        catch (TelegramRouteException $e) { throw $e; }
+        catch (Throwable $e) {
+            Log::error('Route execution failed', ['pattern' => $route['pattern'] ?? 'fallback', 'error' => $e->getMessage()]);
+            throw new TelegramRouteException(
+                'Telegram route execution failed for ['.($route['pattern'] ?? 'fallback').']: '.$e->getMessage(),
+                $route['pattern'] ?? null,
+                $route['callback'] ?? null,
+                $e,
+            );
+        }
     }
 
     protected function resolveAction($action, TelegramUpdate $update)
