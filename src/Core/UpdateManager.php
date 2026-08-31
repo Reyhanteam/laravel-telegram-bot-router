@@ -2,12 +2,13 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Core;
 
+use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler;
 use ReyhanTeam\TelegramBotRouter\Providers\PollingProvider;
 use ReyhanTeam\TelegramBotRouter\Providers\WebhookProvider;
+use Throwable;
 
 class UpdateManager
 {
-    //
     public function handleWebhook()
     {
         $config = config('telegram-bot-router');
@@ -19,8 +20,16 @@ class UpdateManager
         }
 
         $router = app('telegram.router');
-        $provider = new WebhookProvider($router, $config);
-        $provider->start();
+
+        try {
+            $provider = new WebhookProvider($router, $config);
+            $provider->start();
+        } catch (Throwable $e) {
+            $handlerClass = $config['exceptions']['handler'] ?? TelegramExceptionHandler::class;
+            app()->make($handlerClass)->handle($e, ['source' => 'webhook']);
+
+            return response()->json(['error' => 'Telegram update could not be processed.'], 400);
+        }
 
         return response()->json(['status' => 'ok']);
     }
