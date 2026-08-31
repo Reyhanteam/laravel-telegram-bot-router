@@ -3,149 +3,114 @@
 namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Contracts\Container\Container;
+use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareRegistrar;
 
 /**
- * TelegramBot Facade-like router for defining Telegram update routes.
- *
- * Supports Laravel-style routing for Telegram bot updates:
- * - Text messages
- * - Commands
- * - Callback queries
- * - Fallback handlers
- *
- * Example:
- *
- * TelegramBot::onText('salam', [SalamController::class, 'salam']);
- * TelegramBot::onCommand('start', function ($update) { ... });
- * TelegramBot::onCallbackQuery(function ($update) { ... });
- * TelegramBot::fallback(function ($update) { ... });
+ * TelegramBot router for defining Telegram update routes.
  */
 class TelegramBot
 {
     protected static $onInvalidAction = null;
 
-    
-    /**
-     * The Laravel application instance.
-     */
     protected static ?Container $app = null;
 
     /**
-     * All registered routes for Telegram updates.
-     *
-     * @var array<int, array{type: string, pattern: ?string, callback: callable}>
+     * @var array<int, array{type: string, pattern: ?string, callback: callable, middleware: array}>
      */
     protected static array $routes = [];
 
-    /**
-     * The fallback callback for unmatched updates.
-     *
-     * @var callable|null
-     */
+    protected static array $globalMiddleware = [];
+
     protected static $fallback = null;
 
-    // ────────────────────────────────────────────────
-    //  ROUTE DEFINITIONS
-    // ────────────────────────────────────────────────
-
-    /**
-     * Register a command handler, e.g. "/start" or "/help".
-     *
-     * @param  callable  $callback
-     */
-    public static function onCommand(string $command, $callback)
+    public static function onCommand(string $command, $callback): void
     {
         $command = '/'.ltrim($command, '/');
-
         static::addRoute('command', $command, $callback);
     }
 
-    /**
-     * Register a plain text message handler.
-     * Supports exact text or regex patterns (e.g. "/^hi/i").
-     *
-     * @param  callable  $callback
-     */
-    public static function onText(string $pattern, $callback)
+    public static function onText(string $pattern, $callback): void
     {
         static::addRoute('text', $pattern, $callback);
     }
 
-    /**
-     * Register a callback_query handler (button presses etc.)
-     *
-     * @param  callable  $callback
-     */
-    public static function onCallbackQuery($callback)
+    public static function onCallbackQuery($callback): void
     {
         static::addRoute('callback_query', null, $callback);
     }
 
     /**
-     * Define fallback handler — executed when no route matches the update.
-     *
-     * @param  callable  $callback
+     * Attach middleware to the route registered by the returned registrar.
      */
+    public static function middleware(array $middleware): TelegramMiddlewareRegistrar
+    {
+        return new TelegramMiddlewareRegistrar($middleware);
+    }
+
+    /**
+     * Register middleware for every Telegram route.
+     */
+    public static function globalMiddleware(array $middleware): void
+    {
+        static::$globalMiddleware = $middleware;
+    }
+
+    public static function getGlobalMiddleware(): array
+    {
+        return static::$globalMiddleware;
+    }
+
     public static function fallback($callback): void
     {
         static::$fallback = $callback;
     }
 
-    // ────────────────────────────────────────────────
-    //  CORE LOGIC
-    // ────────────────────────────────────────────────
-
     /**
-     * Add a route record to the internal collection.
-     *
-     * @param  string  $type  Route type (command, text, callback_query)
-     * @param  string|null  $pattern  Matching pattern
-     * @param  callable  $callback  Callable/Closure/controller action
+     * @internal Used by TelegramMiddlewareRegistrar.
      */
-    protected static function addRoute(string $type, ?string $pattern, $callback)
+    public static function addMiddlewareRoute(
+        string $type,
+        ?string $pattern,
+        $callback,
+        array $middleware
+    ): void {
+        if ($type === 'command' && $pattern !== null) {
+            $pattern = '/'.ltrim($pattern, '/');
+        }
+
+        static::$routes[] = [
+            'type' => $type,
+            'pattern' => $pattern,
+            'callback' => $callback,
+            'middleware' => $middleware,
+        ];
+    }
+
+    protected static function addRoute(string $type, ?string $pattern, $callback): void
     {
         static::$routes[] = [
             'type' => $type,
             'pattern' => $pattern,
             'callback' => $callback,
+            'middleware' => [],
         ];
-
-        
     }
 
-    // ────────────────────────────────────────────────
-    //  ACCESSORS
-    // ────────────────────────────────────────────────
-
-    /**
-     * Get all defined Telegram routes.
-     *
-     * @return array<int, array{type: string, pattern: ?string, callback: callable}>
-     */
     public static function getRoutes(): array
     {
         return static::$routes;
     }
 
-    /**
-     * Get the fallback handler if defined.
-     */
     public static function getFallback(): ?callable
     {
         return static::$fallback;
     }
 
-    /**
-     * Set the Laravel application container for dependency injection.
-     */
     public static function setApplication(Container $app): void
     {
         static::$app = $app;
     }
 
-    /**
-     * Get the Laravel application container.
-     */
     public static function getApplication(): ?Container
     {
         return static::$app;
@@ -160,6 +125,4 @@ class TelegramBot
     {
         return self::$onInvalidAction;
     }
-
-    
 }
