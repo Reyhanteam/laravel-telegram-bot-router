@@ -7,7 +7,7 @@ use ReyhanTeam\TelegramBotRouter\Providers\WebhookProvider;
 
 class UpdateManager
 {
-    //
+    ///
     public function handleWebhook()
     {
         $config = config('telegram-bot-router');
