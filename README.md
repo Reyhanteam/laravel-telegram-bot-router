@@ -1,6 +1,6 @@
 # Laravel Telegram Bot Router
 
-## Version 1.1.5
+## Version 1.1.15
 
 A Laravel package for routing Telegram bot updates with a Laravel-style routing system. Telegram routes live in `routes/bot.php` and are kept separate from Laravel HTTP routes.
 
