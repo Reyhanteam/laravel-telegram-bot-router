@@ -3,6 +3,8 @@
 namespace ReyhanTeam\TelegramBotRouter\Conversation;
 
 use Closure;
+use InvalidArgumentException;
+use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationCancelled;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationFinished;
 use ReyhanTeam\TelegramBotRouter\Conversation\Events\ConversationStarted;
@@ -54,10 +56,33 @@ class ConversationManager
             return false;
         }
 
-        $result = (new MiddlewarePipeline($conversation['middleware'] ?? []))->process(
-            $update,
-            fn (TelegramUpdate $update): mixed => $this->resolveAction($steps[$index], $update, $conversation['data'] ?? [])
-        );
+        try {
+            $result = (new MiddlewarePipeline($conversation['middleware'] ?? []))->process(
+                $update,
+                fn (TelegramUpdate $update): mixed => $this->resolveAction(
+                    $steps[$index],
+                    $update,
+                    $conversation['data'] ?? []
+                )
+            );
+        } catch (InvalidArgumentException $exception) {
+            Log::warning('Conversation input validation failed', [
+                'conversation' => $name,
+                'step' => $index,
+                'message' => $exception->getMessage(),
+            ]);
+
+            // Keep the current step active. The user can send another input
+            // and the same validation step will be executed again.
+            $this->put(
+                $update,
+                $conversation,
+                $this->conversationTtl($conversation),
+                $conversation['cache_store'] ?? null
+            );
+
+            return true;
+        }
 
         if (is_array($result) && array_key_exists('data', $result)) {
             $conversation['data'] = $result['data'];
@@ -158,7 +183,7 @@ class ConversationManager
             ]);
         }
 
-        throw new \InvalidArgumentException('Invalid Telegram conversation step action.');
+        throw new InvalidArgumentException('Invalid Telegram conversation step action.');
     }
 
     protected function steps(string $name): array
