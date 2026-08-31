@@ -41,9 +41,9 @@ routes/bot.php  -> Telegram bot routes
 - ✅ Conversation timeout
 - ✅ Conversation data
 
-## Version 1.1.4
+## Version 1.1.5
 
-### What's included in v1.1.4
+### What's included in v1.1.5
 
 - ✅ Better Route Matching
 - ✅ Route Constraints
