@@ -7,9 +7,6 @@ use Illuminate\Contracts\Container\Container;
 use ReyhanTeam\TelegramBotRouter\Conversation\ConversationRegistrar;
 use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareRegistrar;
 
-/**
- * TelegramBot router for defining Telegram update routes.
- */
 class TelegramBot
 {
     protected static $onInvalidAction = null;
@@ -73,7 +70,6 @@ class TelegramBot
     public static function group(array $middleware, Closure $routes): void
     {
         static::$middlewareGroupStack[] = $middleware;
-
         try {
             $routes();
         } finally {
@@ -86,11 +82,13 @@ class TelegramBot
         return new ConversationRegistrar($name);
     }
 
-    public static function addConversation(string $name, array $steps, int $ttl = 3600): void
+    public static function addConversation(string $name, array $steps, int $ttl = 3600, array $middleware = [], ?string $cacheStore = null): void
     {
         static::$conversations[$name] = [
             'steps' => array_values($steps),
             'ttl' => $ttl,
+            'middleware' => $middleware,
+            'cache_store' => $cacheStore,
         ];
     }
 
@@ -107,7 +105,6 @@ class TelegramBot
     public static function cancelConversationOnCommand(string $command): void
     {
         $command = '/'.ltrim($command, '/');
-
         if (!in_array($command, static::$conversationCancelCommands, true)) {
             static::$conversationCancelCommands[] = $command;
         }
@@ -133,23 +130,12 @@ class TelegramBot
         if ($type === 'command' && $pattern !== null) {
             $pattern = '/'.ltrim($pattern, '/');
         }
-
-        return static::addRouteWithMiddleware(
-            $type,
-            $pattern,
-            $callback,
-            static::getGroupMiddleware($middleware)
-        );
+        return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware($middleware));
     }
 
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
     {
-        return static::addRouteWithMiddleware(
-            $type,
-            $pattern,
-            $callback,
-            static::getGroupMiddleware()
-        );
+        return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware());
     }
 
     protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
@@ -162,18 +148,13 @@ class TelegramBot
             'constraints' => [],
             'parameters' => static::extractRouteParameters($pattern),
         ];
-
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }
 
     protected static function extractRouteParameters(?string $pattern): array
     {
-        if ($pattern === null || static::isRegexPattern($pattern)) {
-            return [];
-        }
-
+        if ($pattern === null || static::isRegexPattern($pattern)) return [];
         preg_match_all('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', $pattern, $matches);
-
         return $matches[1] ?? [];
     }
 
@@ -198,9 +179,7 @@ class TelegramBot
     protected static function getGroupMiddleware(array $middleware = []): array
     {
         $groupMiddleware = [];
-        foreach (static::$middlewareGroupStack as $group) {
-            $groupMiddleware = array_merge($groupMiddleware, $group);
-        }
+        foreach (static::$middlewareGroupStack as $group) $groupMiddleware = array_merge($groupMiddleware, $group);
         return array_merge($groupMiddleware, $middleware);
     }
 
