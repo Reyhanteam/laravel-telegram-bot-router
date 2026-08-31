@@ -2,6 +2,10 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
+use ReyhanTeam\TelegramBotRouter\Events\CallbackQueryReceived;
+use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
+use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
+use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
 use ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
@@ -27,6 +31,25 @@ class WebhookProvider
             throw new InvalidTelegramUpdateException('Telegram update_id is missing.');
         }
 
-        $this->router->dispatch(TelegramUpdate::fromArray($update));
+        $telegramUpdate = TelegramUpdate::fromArray($update);
+
+        event(new UpdateReceived($telegramUpdate));
+
+        if (isset($telegramUpdate->message)) {
+            event(new MessageReceived($telegramUpdate));
+
+            if (
+                isset($telegramUpdate->message->text)
+                && str_starts_with(trim((string) $telegramUpdate->message->text), '/')
+            ) {
+                event(new CommandReceived($telegramUpdate));
+            }
+        }
+
+        if (isset($telegramUpdate->callback_query)) {
+            event(new CallbackQueryReceived($telegramUpdate));
+        }
+
+        $this->router->dispatch($telegramUpdate);
     }
 }
