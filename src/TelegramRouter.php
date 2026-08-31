@@ -40,6 +40,10 @@ class TelegramRouter
 
     public function dispatch(TelegramUpdate $update): void
     {
+        $update->matches = null;
+        $update->routeParameters = [];
+        $update->commandArguments = [];
+
         $conversationManager = app(ConversationManager::class);
 
         if ($conversationManager->active($update)) {
@@ -90,6 +94,7 @@ class TelegramRouter
         $type = $route['type'] ?? null;
         $pattern = $route['pattern'] ?? null;
         $constraints = $route['constraints'] ?? [];
+        $parameters = $route['parameters'] ?? [];
 
         switch ($type) {
             case 'callback_query':
@@ -113,6 +118,19 @@ class TelegramRouter
                     $command = explode('@', $command, 2)[0];
                 }
 
+                if (!empty($parameters)) {
+                    $match = $this->matchRouteParameters($pattern, $text, $constraints);
+
+                    if ($match === null) return -1;
+
+                    $update->routeParameters = $match;
+                    $update->commandArguments = $argumentText === ''
+                        ? []
+                        : preg_split('/\s+/', $argumentText);
+
+                    return 75;
+                }
+
                 if ($command !== $pattern) return -1;
 
                 $update->commandArguments = $argumentText === ''
@@ -124,10 +142,62 @@ class TelegramRouter
             case 'text':
                 if (!isset($update->message->text)) return -1;
 
-                return $this->patternScore($pattern, trim((string) $update->message->text), $update, $constraints);
+                $text = trim((string) $update->message->text);
+
+                if (!empty($parameters)) {
+                    $match = $this->matchRouteParameters($pattern, $text, $constraints);
+
+                    if ($match === null) return -1;
+
+                    $update->routeParameters = $match;
+                    return 75;
+                }
+
+                return $this->patternScore($pattern, $text, $update, $constraints);
         }
 
         return -1;
+    }
+
+    protected function matchRouteParameters(?string $pattern, string $text, array $constraints): ?array
+    {
+        if ($pattern === null || $this->isRegex($pattern)) {
+            return null;
+        }
+
+        $compiled = preg_quote(trim($pattern), '/');
+        $names = [];
+
+        $compiled = preg_replace_callback(
+            '/\\\\\{([A-Za-z_][A-Za-z0-9_]*)\\\\\}/',
+            function (array $match) use (&$names): string {
+                $name = $match[1];
+                $names[] = $name;
+                return '(?P<'.$name.'>[^\\s]+)';
+            },
+            $compiled
+        );
+
+        if ($compiled === null || $names === []) {
+            return null;
+        }
+
+        $result = @preg_match('/^'.$compiled.'$/u', $text, $matches);
+
+        if ($result !== 1) {
+            return null;
+        }
+
+        if (!$this->constraintsMatch($constraints, $matches)) {
+            return null;
+        }
+
+        $parameters = [];
+        foreach ($names as $name) {
+            $parameters[$name] = $matches[$name];
+        }
+
+        return $parameters;
     }
 
     protected function patternScore(?string $pattern, string $text, TelegramUpdate $update, array $constraints = []): int
@@ -167,7 +237,7 @@ class TelegramRouter
             if (!array_key_exists($name, $matches)) return false;
 
             $value = (string) $matches[$name];
-            $result = @preg_match('/^(?:'.$expression.')$/', $value);
+            $result = @preg_match('/^(?:'.$expression.')$/u', $value);
 
             if ($result !== 1) return false;
         }
@@ -212,16 +282,26 @@ class TelegramRouter
 
     protected function resolveAction($action, TelegramUpdate $update)
     {
-        if ($action instanceof \Closure) return $action($update, ...$update->commandArguments());
+        if ($action instanceof \Closure) {
+            return $action($update, ...$update->commandArguments(), ...array_values($update->routeParameters));
+        }
+
         if (is_array($action) && count($action) === 2) {
             [$controller, $method] = $action;
             if (!is_string($controller) || !class_exists($controller)) throw new \InvalidArgumentException("Telegram route controller [{$controller}] was not found. Check routes/bot.php.");
             if (!is_string($method) || !method_exists($controller, $method)) throw new \InvalidArgumentException("Telegram route method [{$method}] was not found on [{$controller}].");
             $instance = app()->make($controller);
-            return app()->call([$instance, $method], [
+
+            $parameters = [
                 'update' => $update,
                 'arguments' => $update->commandArguments(),
-            ]);
+            ];
+
+            foreach ($update->routeParameters as $name => $value) {
+                $parameters[$name] = $value;
+            }
+
+            return app()->call([$instance, $method], $parameters);
         }
         throw new \InvalidArgumentException('Invalid Telegram route action provided.');
     }
