@@ -1,6 +1,5 @@
 <?php
 
-
 namespace ReyhanTeam\TelegramBotRouter\Console;
 
 use Illuminate\Console\Command;
@@ -15,23 +14,12 @@ class SetPostRouteCommand extends Command
 
     public function handle(): int
     {
-        $path = config('telegram-bot-router.webhook.path');
+        $path = config('telegram-bot-router.webhook.path', '/telegram/webhook');
+        $path = '/'.ltrim($path, '/');
 
-        if (empty($path)) {
-            $this->error('Telegram webhook path is not configured.');
+        Route::post($path, [UpdateManager::class, 'handleWebhook']);
 
-            return self::FAILURE;
-        }
-
-        // حذف اسلش اضافه از ابتدا
-        $path = '/' . ltrim($path, '/');
-
-        Route::post(
-            $path,
-            [UpdateManager::class, 'handleWebhook']
-        );
-
-        $this->info("Telegram webhook route registered:");
+        $this->info('Telegram webhook route registered:');
         $this->line("POST {$path}");
 
         return self::SUCCESS;
