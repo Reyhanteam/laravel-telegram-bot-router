@@ -560,6 +560,71 @@ BOT::middleware([
 
 Parameters are available after `$next` through `...$parameters`.
 
+## Middleware Aliases
+
+Middleware aliases let you register a short name for a Telegram middleware.
+
+Register a single alias:
+
+```php
+BOT::aliasMiddleware('admin', IsAdmin::class);
+```
+
+Use the alias in a route:
+
+```php
+BOT::middleware([
+    'admin',
+])->onCommand('admin', [AdminController::class, 'index']);
+```
+
+Multiple aliases can be registered at once:
+
+```php
+BOT::aliasMiddlewares([
+    'admin' => IsAdmin::class,
+    'auth' => CheckUser::class,
+    'permission' => HasPermission::class,
+]);
+```
+
+Middleware parameters are supported with aliases:
+
+```php
+BOT::aliasMiddleware('permission', HasPermission::class);
+
+BOT::middleware([
+    'permission:users.create',
+])->onCommand('create-user', [UserController::class, 'create']);
+```
+
+Aliases are resolved through Laravel's Service Container.
+
+## Middleware Configuration
+
+Middleware aliases can also be registered in the package configuration.
+
+In `config/telegram-bot-router.php`:
+
+```php
+'middleware' => [
+    'aliases' => [
+        'admin' => App\Telegram\Middleware\IsAdmin::class,
+        'auth' => App\Telegram\Middleware\CheckUser::class,
+    ],
+],
+```
+
+After configuration, use the alias directly in `routes/bot.php`:
+
+```php
+BOT::middleware([
+    'admin',
+])->onCommand('admin', [AdminController::class, 'index']);
+```
+
+Configuration aliases are loaded automatically by the package Service Provider.
+
 ## Middleware Contract
 
 A middleware may implement:
@@ -741,8 +806,8 @@ Webhook and Polling use the same Telegram routing layer.
 - [x] Middleware groups
 - [x] Nested middleware groups
 - [x] Middleware parameters
-- [ ] Named middleware aliases
-- [ ] Middleware configuration
+- [x] Named middleware aliases
+- [x] Middleware configuration
 
 ## 🔴 Priority 3 — Conversation / State ⭐⭐⭐
 
