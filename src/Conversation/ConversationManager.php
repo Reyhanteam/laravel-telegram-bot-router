@@ -16,6 +16,7 @@ class ConversationManager
             'steps' => $steps,
             'step' => 0,
             'data' => $data,
+            'ttl' => $ttl,
         ], $ttl);
     }
 
@@ -58,7 +59,7 @@ class ConversationManager
             return true;
         }
 
-        $this->put($update, $conversation, $this->ttl());
+        $this->put($update, $conversation, $this->conversationTtl($conversation));
         return true;
     }
 
@@ -88,9 +89,9 @@ class ConversationManager
         return $this->prefix . ($update->chatId() ?? 'unknown') . '.' . ($update->userId() ?? 'unknown');
     }
 
-    protected function ttl(): int
+    protected function conversationTtl(array $conversation): int
     {
-        return (int) config('telegram-bot-router.conversation.ttl', 3600);
+        return (int) ($conversation['ttl'] ?? config('telegram-bot-router.conversation.ttl', 3600));
     }
 
     protected function resolveAction($action, TelegramUpdate $update, array $data): mixed
