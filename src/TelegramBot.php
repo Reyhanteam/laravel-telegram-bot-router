@@ -117,9 +117,57 @@ class TelegramBot
             'callback' => $callback,
             'middleware' => $middleware,
             'constraints' => [],
+            'parameters' => static::extractRouteParameters($pattern),
         ];
 
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
+    }
+
+    protected static function extractRouteParameters(?string $pattern): array
+    {
+        if ($pattern === null || static::isRegexPattern($pattern)) {
+            return [];
+        }
+
+        preg_match_all('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', $pattern, $matches);
+
+        return $matches[1] ?? [];
+    }
+
+    protected static function isRegexPattern(string $pattern): bool
+    {
+        if (strlen($pattern) < 3) {
+            return false;
+        }
+
+        $delimiter = $pattern[0];
+        if (ctype_alnum($delimiter) || $delimiter === '\\') {
+            return false;
+        }
+
+        $length = strlen($pattern);
+        $escaped = false;
+
+        for ($i = 1; $i < $length; $i++) {
+            $char = $pattern[$i];
+
+            if ($escaped) {
+                $escaped = false;
+                continue;
+            }
+
+            if ($char === '\\') {
+                $escaped = true;
+                continue;
+            }
+
+            if ($char === $delimiter) {
+                $modifiers = substr($pattern, $i + 1);
+                return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1;
+            }
+        }
+
+        return false;
     }
 
     protected static function getGroupMiddleware(array $middleware = []): array
