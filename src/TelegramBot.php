@@ -20,20 +20,20 @@ class TelegramBot
     protected static array $conversations = [];
     protected static $fallback = null;
 
-    public static function onCommand(string $command, $callback): void
+    public static function onCommand(string $command, $callback): TelegramRouteRegistrar
     {
         $command = '/'.ltrim($command, '/');
-        static::addRoute('command', $command, $callback);
+        return static::addRoute('command', $command, $callback);
     }
 
-    public static function onText(string $pattern, $callback): void
+    public static function onText(string $pattern, $callback): TelegramRouteRegistrar
     {
-        static::addRoute('text', $pattern, $callback);
+        return static::addRoute('text', $pattern, $callback);
     }
 
-    public static function onCallbackQuery($callback): void
+    public static function onCallbackQuery($callback): TelegramRouteRegistrar
     {
-        static::addRoute('callback_query', null, $callback);
+        return static::addRoute('callback_query', null, $callback);
     }
 
     public static function middleware(array $middleware): TelegramMiddlewareRegistrar
@@ -91,25 +91,33 @@ class TelegramBot
             $pattern = '/'.ltrim($pattern, '/');
         }
 
-        return static::addRouteWithMiddleware($type, $pattern, $callback, $middleware);
+        return static::addRouteWithMiddleware(
+            $type,
+            $pattern,
+            $callback,
+            static::getGroupMiddleware($middleware)
+        );
     }
 
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
     {
-        return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware());
+        return static::addRouteWithMiddleware(
+            $type,
+            $pattern,
+            $callback,
+            static::getGroupMiddleware()
+        );
     }
 
     protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
     {
-        $route = [
+        static::$routes[] = [
             'type' => $type,
             'pattern' => $pattern,
             'callback' => $callback,
-            'middleware' => static::getGroupMiddleware($middleware),
+            'middleware' => $middleware,
             'constraints' => [],
         ];
-
-        static::$routes[] = $route;
 
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }
