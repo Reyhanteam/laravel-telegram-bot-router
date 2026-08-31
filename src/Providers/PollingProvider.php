@@ -2,93 +2,103 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
-use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
 class PollingProvider
 {
     protected $router;
-    protected $interval;
-    protected $timeout;
+    protected int $interval;
+    protected int $timeout;
+    protected string $token;
+    protected string $apiUrl;
 
-    public function __construct($router, $config)
+    public function __construct($router, array $config)
     {
-        $this->router   = $router;
-        $this->interval = $config['polling']['interval'] ?? 2000;
-        $this->timeout  = $config['polling']['timeout'] ?? 30;
+        $this->router = $router;
+        $this->interval = max(0, (int) ($config['polling']['interval'] ?? 1500));
+        $this->timeout = max(1, (int) ($config['polling']['timeout'] ?? 30));
+        $this->token = (string) ($config['token'] ?? '');
+        $this->apiUrl = rtrim((string) ($config['polling']['api_url'] ?? 'https://api.telegram.org'), '/');
+
+        if ($this->token === '') {
+            throw new \RuntimeException('Telegram bot token is not configured. Set TELEGRAM_BOT_TOKEN.');
+        }
     }
 
-    public function start()
+    public function start(): void
     {
         $offset = 0;
 
         while (true) {
-
             $updates = $this->getUpdates($offset);
 
             foreach ($updates as $update) {
-                echo "new update recived: " . $update['update_id'] . PHP_EOL;
+                if (!isset($update['update_id'])) {
+                    continue;
+                }
 
-                $offset = $update['update_id'] + 1;
+                echo 'New update received: '.$update['update_id'].PHP_EOL;
+                $offset = (int) $update['update_id'] + 1;
 
-                $tu = TelegramUpdate::fromArray($update);
-
-                $this->router->dispatch($tu);
+                $this->router->dispatch(TelegramUpdate::fromArray($update));
             }
 
-            usleep($this->interval * 1000);
+            if ($this->interval > 0) {
+                usleep($this->interval * 1000);
+            }
         }
     }
 
-    private function getUpdates($offset)
+    private function getUpdates(int $offset): array
     {
-        $token = getenv('BOT_TOKEN');
-
-        $url = getenv('BOT_PATH_POLLING_URL')
-            . $token
-            . "/getUpdates?offset={$offset}&timeout={$this->timeout}";
+        $url = $this->apiUrl.'/bot'.$this->token.'/getUpdates?offset='.
+            $offset.'&timeout='.$this->timeout;
 
         $ch = curl_init($url);
+
+        if ($ch === false) {
+            throw new \RuntimeException('Unable to initialize cURL.');
+        }
 
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => false,
-CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_TIMEOUT => $this->timeout + 10,
             CURLOPT_HTTPGET => true,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
         ]);
 
         $response = curl_exec($ch);
 
         if ($response === false) {
             $error = curl_error($ch);
-
             curl_close($ch);
-
-            throw new \Exception(
-                'Telegram connection error: ' . $error
-            );
+            throw new \RuntimeException('Telegram connection error: '.$error);
         }
 
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            throw new \Exception(
+            throw new \RuntimeException(
                 "Telegram API returned HTTP {$httpCode}: {$response}"
             );
         }
 
         $data = json_decode($response, true);
 
-        if (!is_array($data)) {
-            throw new \Exception(
-                'Invalid response from Telegram API: ' . $response
+        if (!is_array($data) || !isset($data['ok'])) {
+            throw new \RuntimeException('Invalid response from Telegram API: '.$response);
+        }
+
+        if ($data['ok'] !== true) {
+            throw new \RuntimeException(
+                'Telegram API error: '.($data['description'] ?? 'Unknown error')
             );
         }
 
-        return $data['result'] ?? [];
+        return is_array($data['result'] ?? null) ? $data['result'] : [];
     }
 }
