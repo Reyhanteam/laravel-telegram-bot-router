@@ -41,6 +41,22 @@ routes/bot.php  -> Telegram bot routes
 - ✅ Conversation timeout
 - ✅ Conversation data
 
+## Version 1.1.4
+
+### What's included in v1.1.4
+
+- ✅ Better Route Matching
+- ✅ Route Constraints
+- ✅ Command Arguments
+- ✅ Route Parameters
+- ✅ Route Parameter access through `TelegramUpdate`
+- ✅ Multiple Route Parameters
+- ✅ Route Parameters with Constraints
+- ✅ Command Arguments are passed to Closure handlers as an array
+
+**Priority 1 — Core Telegram Routing is now complete.**
+
+
 ## Installation
 
 ```bash
