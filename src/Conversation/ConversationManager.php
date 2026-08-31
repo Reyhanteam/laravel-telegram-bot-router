@@ -18,7 +18,6 @@ class ConversationManager
     {
         $conversation = [
             'name' => $name,
-            'steps' => $steps,
             'step' => 0,
             'data' => $data,
             'ttl' => $ttl,
@@ -27,6 +26,7 @@ class ConversationManager
             'expires_at' => time() + $ttl,
         ];
 
+        $this->registerSteps($name, $steps);
         $this->put($update, $conversation, $ttl, $cacheStore);
         event(new ConversationStarted($update, $name, $data));
     }
@@ -44,12 +44,13 @@ class ConversationManager
             return false;
         }
 
-        $steps = $conversation['steps'] ?? [];
+        $name = (string) ($conversation['name'] ?? '');
+        $steps = $this->steps($name);
         $index = (int) ($conversation['step'] ?? 0);
 
         if (!isset($steps[$index])) {
             $this->forget($update, $conversation);
-            event(new ConversationFinished($update, (string) ($conversation['name'] ?? ''), $conversation['data'] ?? []));
+            event(new ConversationFinished($update, $name, $conversation['data'] ?? []));
             return false;
         }
 
@@ -64,14 +65,14 @@ class ConversationManager
 
         event(new ConversationStepCompleted(
             $update,
-            (string) ($conversation['name'] ?? ''),
+            $name,
             $index,
             $conversation['data'] ?? []
         ));
 
         if (is_array($result) && ($result['done'] ?? false) === true) {
             $this->forget($update, $conversation);
-            event(new ConversationFinished($update, (string) ($conversation['name'] ?? ''), $conversation['data'] ?? []));
+            event(new ConversationFinished($update, $name, $conversation['data'] ?? []));
             return true;
         }
 
@@ -79,7 +80,7 @@ class ConversationManager
 
         if (!isset($steps[$conversation['step']])) {
             $this->forget($update, $conversation);
-            event(new ConversationFinished($update, (string) ($conversation['name'] ?? ''), $conversation['data'] ?? []));
+            event(new ConversationFinished($update, $name, $conversation['data'] ?? []));
             return true;
         }
 
@@ -155,4 +156,16 @@ class ConversationManager
 
         throw new \InvalidArgumentException('Invalid Telegram conversation step action.');
     }
+
+    protected function registerSteps(string $name, array $steps): void
+    {
+        static::$steps[$name] = $steps;
+    }
+
+    protected function steps(string $name): array
+    {
+        return static::$steps[$name] ?? [];
+    }
+
+    protected static array $steps = [];
 }
