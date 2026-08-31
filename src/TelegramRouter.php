@@ -3,39 +3,35 @@
 namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Http\Request;
-use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class TelegramRouter
 {
-    protected Request $request;
+    protected ?Request $request;
 
     protected TelegramUpdate $update;
 
-    public function __construct(Request $request)
+    public function __construct(?Request $request = null)
     {
         $this->request = $request;
     }
 
-    /**
-     * Handle incoming Telegram webhook
-     */
     public function handle()
     {
-        $content = $this->request->getContent();
+        if (!$this->request) {
+            return response()->json(['error' => 'HTTP request is not available'], 500);
+        }
 
-        $data = json_decode($content);
+        $data = json_decode($this->request->getContent());
 
-        if (! $data || json_last_error() !== JSON_ERROR_NONE) {
+        if (!is_object($data) || json_last_error() !== JSON_ERROR_NONE) {
             Log::error('Invalid JSON received from Telegram');
-
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
 
-        if (! isset($data->update_id)) {
+        if (!isset($data->update_id)) {
             Log::warning('Telegram update without update_id');
-
             return response()->json(['ok' => true]);
         }
 
@@ -55,117 +51,108 @@ class TelegramRouter
         return response()->json(['ok' => true]);
     }
 
-    /**
-     * Dispatch update to matching route
-     */
     public function dispatch(TelegramUpdate $update): void
     {
         $routes = TelegramBot::getRoutes();
-        $fallback = TelegramBot::getFallback();
 
         foreach ($routes as $route) {
-
-            if (! $this->routeMatches($route, $update)) {
+            if (!$this->routeMatches($route, $update)) {
                 continue;
             }
 
             $this->execute($route, $update);
-
             return;
         }
 
-        if ($fallback) {
+        if ($fallback = TelegramBot::getFallback()) {
             $this->execute([
                 'callback' => $fallback,
                 'pattern' => 'fallback',
             ], $update);
-
             return;
         }
-        $onInvalid = TelegramBot::getOnInvalid();
 
-        if ($onInvalid) {
+        if ($onInvalid = TelegramBot::getOnInvalid()) {
             $this->execute([
                 'callback' => $onInvalid,
                 'pattern' => 'onInvalid',
             ], $update);
-
             return;
         }
+
         Log::info('No matching route found', [
             'update_type' => $this->getUpdateType($update),
         ]);
     }
 
-    /**
-     * Determine if route matches update
-     */
     protected function routeMatches(array $route, TelegramUpdate $update): bool
     {
         $type = $route['type'] ?? null;
         $pattern = $route['pattern'] ?? null;
 
         switch ($type) {
-
             case 'callback_query':
-
-                if (! isset($update->callback_query)) {
+                if (!isset($update->callback_query)) {
                     return false;
                 }
 
-                $data = $update->callback_query->data ?? '';
+                // onCallbackQuery() without a pattern matches every callback query.
+                if ($pattern === null || $pattern === '') {
+                    return true;
+                }
 
-                return $this->matchPattern($pattern, $data, $update);
+                return $this->matchPattern($pattern, (string) ($update->callback_query->data ?? ''), $update);
 
             case 'command':
-
-                if (! isset($update->message->text)) {
+                if (!isset($update->message->text)) {
                     return false;
                 }
 
-                $text = trim($update->message->text);
-
-                if (! str_starts_with($text, '/')) {
+                $text = trim((string) $update->message->text);
+                if (!str_starts_with($text, '/')) {
                     return false;
                 }
 
-                $command = explode(' ', $text)[0];
-
+                $command = explode(' ', $text, 2)[0];
                 if (str_contains($command, '@')) {
-                    $command = explode('@', $command)[0];
+                    $command = explode('@', $command, 2)[0];
                 }
 
                 return $command === $pattern;
 
             case 'text':
-
-                if (! isset($update->message->text)) {
+                if (!isset($update->message->text)) {
                     return false;
                 }
 
-                $text = trim($update->message->text);
-
-                return $this->matchPattern($pattern, $text, $update);
+                return $this->matchPattern(
+                    (string) $pattern,
+                    trim((string) $update->message->text),
+                    $update
+                );
         }
 
         return false;
     }
 
-    /**
-     * Match plain text or regex pattern
-     */
     protected function matchPattern(string $pattern, string $text, TelegramUpdate $update): bool
     {
         $pattern = trim($pattern);
         $text = trim($text);
 
         if ($this->isRegex($pattern)) {
+            $result = preg_match($pattern, $text, $matches);
 
-            if (preg_match($pattern, $text, $matches)) {
-
+            if ($result === 1) {
                 $update->matches = $matches;
-
                 return true;
+            }
+
+            if ($result === false) {
+                Log::warning('Invalid Telegram route regex', [
+                    'pattern' => $pattern,
+                    'error' => preg_last_error_msg(),
+                ]);
             }
 
             return false;
@@ -174,9 +161,6 @@ class TelegramRouter
         return $pattern === $text;
     }
 
-    /**
-     * Detect if pattern is regex
-     */
     protected function isRegex(string $pattern): bool
     {
         if (strlen($pattern) < 3) {
@@ -186,38 +170,24 @@ class TelegramRouter
         $delimiter = $pattern[0];
 
         return $delimiter === substr($pattern, -1)
-            && ! ctype_alnum($delimiter)
+            && !ctype_alnum($delimiter)
             && $delimiter !== '\\';
     }
 
-    /**
-     * Execute route action
-     */
     protected function execute(array $route, TelegramUpdate $update): void
     {
-    $callback = $route['callback'];
+        try {
+            $this->resolveAction($route['callback'], $update);
+        } catch (Throwable $e) {
+            Log::error('Route execution failed', [
+                'pattern' => $route['pattern'] ?? 'fallback',
+                'error' => $e->getMessage(),
+            ]);
 
-    try {
-        // اجرای مستقیم callback بدون واسطه‌ی Pipeline
-        $this->resolveAction($callback, $update);
-
-    } catch (Throwable $e) {
-        Log::error('Route execution failed', [
-            'pattern' => $route['pattern'] ?? 'fallback',
-            'error' => $e->getMessage(),
-        ]);
-
-        throw $e;
+            throw $e;
+        }
     }
-}
 
-    /**
-     * Resolve route action
-     *
-     * Supports:
-     * - Closure
-     * - [Controller::class, 'method']
-     */
     protected function resolveAction($action, TelegramUpdate $update)
     {
         if ($action instanceof \Closure) {
@@ -227,17 +197,17 @@ class TelegramRouter
         if (is_array($action) && count($action) === 2) {
             [$controller, $method] = $action;
 
-            // --- کد دیباگ زیر را اضافه کن ---
-            if (! class_exists($controller)) {
-                Log::error('TelegramRouter Error: Controller class does not exist', [
-                    'provided_controller' => $controller,
-                    'action_array' => $action,
-                ]);
-
-                // اگر می‌خواهی همان لحظه ببینی مشکل کجاست:
-                throw new \Exception("کلاس کنترلر با نام [{$controller}] یافت نشد. چک کن در routes/bot.php چی نوشتی!");
+            if (!is_string($controller) || !class_exists($controller)) {
+                throw new \InvalidArgumentException(
+                    "Telegram route controller [{$controller}] was not found. Check routes/bot.php."
+                );
             }
-            // -------------------------------
+
+            if (!method_exists($controller, $method)) {
+                throw new \InvalidArgumentException(
+                    "Telegram route method [{$method}] was not found on [{$controller}]."
+                );
+            }
 
             $instance = app()->make($controller);
 
@@ -246,12 +216,9 @@ class TelegramRouter
             ]);
         }
 
-        throw new \InvalidArgumentException('Invalid route action provided.');
+        throw new \InvalidArgumentException('Invalid Telegram route action provided.');
     }
 
-    /**
-     * Detect update type
-     */
     protected function getUpdateType(TelegramUpdate $update): string
     {
         if (isset($update->callback_query)) {
@@ -259,14 +226,11 @@ class TelegramRouter
         }
 
         if (isset($update->message->text)) {
-
-            return str_starts_with($update->message->text, '/')
+            return str_starts_with((string) $update->message->text, '/')
                 ? 'command'
                 : 'text';
         }
 
         return 'unknown';
     }
-
-   
 }
