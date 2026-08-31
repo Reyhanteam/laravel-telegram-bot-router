@@ -16,6 +16,11 @@ class TelegramUpdate
      */
     public array $commandArguments = [];
 
+    /**
+     * Named parameters captured by a Telegram route.
+     */
+    public array $routeParameters = [];
+
     public function __construct($update)
     {
         $this->update = is_array($update) ? (object) $update : $update;
@@ -123,6 +128,22 @@ class TelegramUpdate
     public function commandArguments(): array
     {
         return $this->commandArguments;
+    }
+
+    /**
+     * Get named parameters captured by the matched Telegram route.
+     *
+     * Example: /user 123 for the route /user {id}
+     * returns ['id' => '123'].
+     */
+    public function routeParameters(): array
+    {
+        return $this->routeParameters;
+    }
+
+    public function routeParameter(string $name, mixed $default = null): mixed
+    {
+        return $this->routeParameters[$name] ?? $default;
     }
 
     public static function fromArray($data)
