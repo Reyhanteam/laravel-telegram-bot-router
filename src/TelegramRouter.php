@@ -51,9 +51,20 @@ class TelegramRouter
             return;
         }
 
+        $matchedRoute = null;
+        $matchedScore = -1;
+
         foreach (TelegramBot::getRoutes() as $route) {
-            if (!$this->routeMatches($route, $update)) continue;
-            $this->execute($route, $update);
+            $score = $this->routeMatchScore($route, $update);
+
+            if ($score > $matchedScore) {
+                $matchedRoute = $route;
+                $matchedScore = $score;
+            }
+        }
+
+        if ($matchedRoute !== null) {
+            $this->execute($matchedRoute, $update);
             return;
         }
 
@@ -70,35 +81,74 @@ class TelegramRouter
 
     protected function routeMatches(array $route, TelegramUpdate $update): bool
     {
+        return $this->routeMatchScore($route, $update) >= 0;
+    }
+
+    protected function routeMatchScore(array $route, TelegramUpdate $update): int
+    {
         $type = $route['type'] ?? null;
         $pattern = $route['pattern'] ?? null;
+
         switch ($type) {
             case 'callback_query':
-                if (!isset($update->callback_query)) return false;
-                if ($pattern === null || $pattern === '') return true;
-                return $this->matchPattern((string) $pattern, (string) ($update->callback_query->data ?? ''), $update);
+                if (!isset($update->callback_query)) return -1;
+                return $pattern === null || $pattern === '' ? 10 : $this->patternScore($pattern, (string) ($update->callback_query->data ?? ''), $update);
+
             case 'command':
-                if (!isset($update->message->text)) return false;
+                if (!isset($update->message->text)) return -1;
+
                 $text = trim((string) $update->message->text);
-                if (!str_starts_with($text, '/')) return false;
-                $command = explode(' ', $text, 2)[0];
-                if (str_contains($command, '@')) $command = explode('@', $command, 2)[0];
-                return $command === $pattern;
+                if ($text === '' || !str_starts_with($text, '/')) return -1;
+
+                $parts = preg_split('/\s+/', $text, 2);
+                $command = $parts[0] ?? '';
+
+                if (str_contains($command, '@')) {
+                    $command = explode('@', $command, 2)[0];
+                }
+
+                return $command === $pattern ? 100 : -1;
+
             case 'text':
-                if (!isset($update->message->text)) return false;
-                return $this->matchPattern((string) $pattern, trim((string) $update->message->text), $update);
+                if (!isset($update->message->text)) return -1;
+
+                return $this->patternScore($pattern, trim((string) $update->message->text), $update);
         }
-        return false;
+
+        return -1;
+    }
+
+    protected function patternScore(?string $pattern, string $text, TelegramUpdate $update): int
+    {
+        if ($pattern === null) return -1;
+
+        $pattern = trim($pattern);
+        $text = trim($text);
+
+        if (!$this->isRegex($pattern)) {
+            return $pattern === $text ? 100 : -1;
+        }
+
+        $result = @preg_match($pattern, $text, $matches);
+
+        if ($result === 1) {
+            $update->matches = $matches;
+            return 50;
+        }
+
+        if ($result === false) {
+            Log::warning('Invalid Telegram route regex', [
+                'pattern' => $pattern,
+                'error' => preg_last_error_msg(),
+            ]);
+        }
+
+        return -1;
     }
 
     protected function matchPattern(string $pattern, string $text, TelegramUpdate $update): bool
     {
-        $pattern = trim($pattern); $text = trim($text);
-        if (!$this->isRegex($pattern)) return $pattern === $text;
-        $result = @preg_match($pattern, $text, $matches);
-        if ($result === 1) { $update->matches = $matches; return true; }
-        if ($result === false) Log::warning('Invalid Telegram route regex', ['pattern' => $pattern, 'error' => preg_last_error_msg()]);
-        return false;
+        return $this->patternScore($pattern, $text, $update) >= 0;
     }
 
     protected function isRegex(string $pattern): bool
