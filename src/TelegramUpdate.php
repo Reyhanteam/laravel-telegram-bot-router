@@ -7,37 +7,28 @@ use stdClass;
 
 class TelegramUpdate
 {
-    
     protected stdClass $update;
 
-    public ?array $matches = null; // برای نگهداری نتایج RegExp
+    public ?array $matches = null;
+
+    /**
+     * Arguments provided after the Telegram command.
+     */
+    public array $commandArguments = [];
 
     public function __construct($update)
     {
         $this->update = is_array($update) ? (object) $update : $update;
     }
 
-    /**
-     * Dynamically access properties of the update object.
-     *
-     * @param  string  $key
-     * @return mixed
-     */
     public function __get($key)
     {
         return $this->recursiveGet($this->update, $key);
     }
 
-    /**
-     * Recursively access nested properties.
-     *
-     * @param  mixed  $object
-     * @return mixed
-     */
     protected function recursiveGet($object, string $key)
     {
         if (is_object($object) && property_exists($object, $key)) {
-
             $value = $object->{$key};
 
             if (is_object($value) || is_array($value)) {
@@ -49,9 +40,7 @@ class TelegramUpdate
 
         if (is_object($object)) {
             foreach ($object as $prop => $value) {
-
                 if (Str::snake($prop) === $key) {
-
                     if (is_object($value) || is_array($value)) {
                         return new static($value);
                     }
@@ -64,21 +53,11 @@ class TelegramUpdate
         return null;
     }
 
-    /**
-     * Check if the update has a specific property.
-     *
-     * @param  string  $key
-     */
     public function __isset($key): bool
     {
         return $this->recursiveIsset($this->update, $key);
     }
 
-    /**
-     * Recursively check if a property exists.
-     *
-     * @param  mixed  $object
-     */
     protected function recursiveIsset($object, string $key): bool
     {
         if (is_object($object) && property_exists($object, $key)) {
@@ -94,19 +73,10 @@ class TelegramUpdate
         return false;
     }
 
-    /**
-     * Get the original update object.
-     */
     public function originalUpdate(): stdClass
     {
         return $this->update;
     }
-
-    /**
-     * Alias for message->chat->id.
-     *
-     * @return mixed
-     */
 
     public function chatId()
     {
@@ -132,9 +102,6 @@ class TelegramUpdate
             ?? null;
     }
 
-    /**
-     * Alias for message->text.
-     */
     public function text()
     {
         return $this->message->text
@@ -142,12 +109,20 @@ class TelegramUpdate
             ?? null;
     }
 
-    /**
-     * Alias for callback_query->data.
-     */
     public function callbackQueryData(): ?string
     {
         return $this->callback_query->data ?? null;
+    }
+
+    /**
+     * Get the arguments supplied after the Telegram command.
+     *
+     * Example: /start one two
+     * returns ['one', 'two'].
+     */
+    public function commandArguments(): array
+    {
+        return $this->commandArguments;
     }
 
     public static function fromArray($data)
