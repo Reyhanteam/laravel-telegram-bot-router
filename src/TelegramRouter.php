@@ -305,7 +305,7 @@ class TelegramRouter
     protected function resolveAction($action, TelegramUpdate $update)
     {
         if ($action instanceof \Closure) {
-            return $action($update, ...$update->commandArguments(), ...array_values($update->routeParameters));
+            return $action($update, $update->commandArguments(), ...array_values($update->routeParameters));
         }
 
         if (is_array($action) && count($action) === 2) {
