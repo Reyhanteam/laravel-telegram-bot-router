@@ -7,7 +7,6 @@ use ReyhanTeam\TelegramBotRouter\TelegramBot;
 class ConversationRegistrar
 {
     protected array $steps = [];
-
     protected int $ttl = 3600;
 
     public function __construct(protected string $name)
@@ -24,6 +23,19 @@ class ConversationRegistrar
     {
         $this->ttl = $seconds;
         return $this;
+    }
+
+    public function startOnCommand(string $command): void
+    {
+        TelegramBot::addConversation($this->name, $this->steps, $this->ttl);
+        TelegramBot::onCommand($command, function ($update) {
+            app(ConversationManager::class)->start(
+                $update,
+                $this->name,
+                $this->steps,
+                $this->ttl
+            );
+        });
     }
 
     public function register(): void
