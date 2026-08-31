@@ -2,6 +2,7 @@
 
 namespace ReyhanTeam\TelegramBotRouter;
 
+use Closure;
 use Illuminate\Contracts\Container\Container;
 use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareRegistrar;
 
@@ -20,6 +21,8 @@ class TelegramBot
     protected static array $routes = [];
 
     protected static array $globalMiddleware = [];
+
+    protected static array $middlewareGroupStack = [];
 
     protected static $fallback = null;
 
@@ -55,6 +58,20 @@ class TelegramBot
         static::$globalMiddleware = $middleware;
     }
 
+    /**
+     * Register a group of Telegram routes with shared middleware.
+     */
+    public static function group(array $middleware, Closure $routes): void
+    {
+        static::$middlewareGroupStack[] = $middleware;
+
+        try {
+            $routes();
+        } finally {
+            array_pop(static::$middlewareGroupStack);
+        }
+    }
+
     public static function getGlobalMiddleware(): array
     {
         return static::$globalMiddleware;
@@ -82,7 +99,7 @@ class TelegramBot
             'type' => $type,
             'pattern' => $pattern,
             'callback' => $callback,
-            'middleware' => $middleware,
+            'middleware' => static::getGroupMiddleware($middleware),
         ];
     }
 
@@ -92,8 +109,19 @@ class TelegramBot
             'type' => $type,
             'pattern' => $pattern,
             'callback' => $callback,
-            'middleware' => [],
+            'middleware' => static::getGroupMiddleware(),
         ];
+    }
+
+    protected static function getGroupMiddleware(array $middleware = []): array
+    {
+        $groupMiddleware = [];
+
+        foreach (static::$middlewareGroupStack as $group) {
+            $groupMiddleware = array_merge($groupMiddleware, $group);
+        }
+
+        return array_merge($groupMiddleware, $middleware);
     }
 
     public static function getRoutes(): array
