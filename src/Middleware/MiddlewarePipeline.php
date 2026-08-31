@@ -18,7 +18,7 @@ class MiddlewarePipeline
             array_reverse($this->middleware),
             function (Closure $next, $middleware): Closure {
                 return function (TelegramUpdate $update) use ($middleware, $next): mixed {
-                    $instance = $this->resolve($middleware);
+                    [$instance, $parameters] = $this->resolve($middleware);
 
                     if (!method_exists($instance, 'handle')) {
                         throw new RuntimeException(sprintf(
@@ -27,7 +27,7 @@ class MiddlewarePipeline
                         ));
                     }
 
-                    return $instance->handle($update, $next);
+                    return $instance->handle($update, $next, ...$parameters);
                 };
             },
             $destination
@@ -36,19 +36,43 @@ class MiddlewarePipeline
         return $pipeline($update);
     }
 
-    protected function resolve($middleware): object
+    protected function resolve($middleware): array
     {
         if (is_object($middleware)) {
-            return $middleware;
+            return [$middleware, []];
         }
 
-        if (!is_string($middleware) || !class_exists($middleware)) {
+        if (!is_string($middleware) || $middleware === '') {
             throw new RuntimeException(sprintf(
                 'Telegram middleware [%s] could not be resolved.',
                 (string) $middleware
             ));
         }
 
-        return app()->make($middleware);
+        [$class, $parameters] = $this->parseMiddleware($middleware);
+
+        if (!class_exists($class)) {
+            throw new RuntimeException(sprintf(
+                'Telegram middleware [%s] could not be resolved.',
+                $class
+            ));
+        }
+
+        return [app()->make($class), $parameters];
+    }
+
+    protected function parseMiddleware(string $middleware): array
+    {
+        $parts = explode(':', $middleware, 2);
+
+        if (count($parts) === 1) {
+            return [$parts[0], []];
+        }
+
+        $parameters = $parts[1] === ''
+            ? []
+            : str_getcsv($parts[1]);
+
+        return [$parts[0], $parameters];
     }
 }
