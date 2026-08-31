@@ -85,28 +85,33 @@ class TelegramBot
         static::$fallback = $callback;
     }
 
-    public static function addMiddlewareRoute(string $type, ?string $pattern, $callback, array $middleware): void
+    public static function addMiddlewareRoute(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
     {
         if ($type === 'command' && $pattern !== null) {
             $pattern = '/'.ltrim($pattern, '/');
         }
 
-        static::$routes[] = [
+        return static::addRouteWithMiddleware($type, $pattern, $callback, $middleware);
+    }
+
+    protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
+    {
+        return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware());
+    }
+
+    protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
+    {
+        $route = [
             'type' => $type,
             'pattern' => $pattern,
             'callback' => $callback,
             'middleware' => static::getGroupMiddleware($middleware),
+            'constraints' => [],
         ];
-    }
 
-    protected static function addRoute(string $type, ?string $pattern, $callback): void
-    {
-        static::$routes[] = [
-            'type' => $type,
-            'pattern' => $pattern,
-            'callback' => $callback,
-            'middleware' => static::getGroupMiddleware(),
-        ];
+        static::$routes[] = $route;
+
+        return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }
 
     protected static function getGroupMiddleware(array $middleware = []): array
@@ -118,6 +123,15 @@ class TelegramBot
         }
 
         return array_merge($groupMiddleware, $middleware);
+    }
+
+    public static function addConstraint(int $routeIndex, string $name, string $expression): void
+    {
+        if (!isset(static::$routes[$routeIndex])) {
+            throw new \OutOfBoundsException('Telegram route does not exist.');
+        }
+
+        static::$routes[$routeIndex]['constraints'][$name] = $expression;
     }
 
     public static function getRoutes(): array
