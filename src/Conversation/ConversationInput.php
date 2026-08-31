@@ -7,6 +7,8 @@ use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
 class ConversationInput
 {
+    protected ?string $validatedValue = null;
+
     public function __construct(
         protected TelegramUpdate $update,
         protected array $data = [],
@@ -20,78 +22,98 @@ class ConversationInput
 
     public function value(?string $default = null): ?string
     {
+        if ($this->validatedValue !== null) {
+            return $this->validatedValue;
+        }
+
         $value = $this->update->text();
+
         return $value === null ? $default : (string) $value;
     }
 
-    public function required(): string
+    public function required(): static
     {
         $value = trim((string) $this->value(''));
+
         if ($value === '') {
             throw new InvalidArgumentException('Conversation input is required.');
         }
 
-        return $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
-    public function string(): string
+    public function string(): static
     {
-        return (string) $this->value('');
+        $this->validatedValue = (string) $this->value('');
+
+        return $this;
     }
 
-    public function integer(): int
+    public function integer(): static
     {
-        $value = trim($this->required());
+        $value = trim((string) $this->value(''));
 
         if (!preg_match('/^-?\d+$/', $value)) {
             throw new InvalidArgumentException('Conversation input must be an integer.');
         }
 
-        return (int) $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
-    public function matches(string $pattern): string
+    public function matches(string $pattern): static
     {
-        $value = $this->required();
+        $value = $this->required()->value('');
 
         if (preg_match($pattern, $value) !== 1) {
             throw new InvalidArgumentException('Conversation input does not match the required pattern.');
         }
 
-        return $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
-    public function minLength(int $length): string
+    public function minLength(int $length): static
     {
-        $value = $this->required();
+        $value = $this->required()->value('');
 
         if (mb_strlen($value) < $length) {
             throw new InvalidArgumentException("Conversation input must contain at least {$length} characters.");
         }
 
-        return $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
-    public function maxLength(int $length): string
+    public function maxLength(int $length): static
     {
-        $value = $this->required();
+        $value = $this->required()->value('');
 
         if (mb_strlen($value) > $length) {
             throw new InvalidArgumentException("Conversation input must contain no more than {$length} characters.");
         }
 
-        return $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
-    public function in(array $allowed): string
+    public function in(array $allowed): static
     {
-        $value = $this->required();
+        $value = $this->required()->value('');
 
         if (!in_array($value, $allowed, true)) {
             throw new InvalidArgumentException('Conversation input is not an allowed value.');
         }
 
-        return $value;
+        $this->validatedValue = $value;
+
+        return $this;
     }
 
     public function data(?string $key = null, mixed $default = null): mixed
