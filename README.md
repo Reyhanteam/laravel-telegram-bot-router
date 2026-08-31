@@ -188,19 +188,141 @@ Route Middleware
 Controller / Closure
 ```
 
-A middleware must provide a `handle()` method:
+## Creating a Middleware
+
+You can create a Telegram middleware inside your Laravel application. A common location is:
+
+```text
+app/Telegram/Middleware/
+```
+
+For example:
+
+```text
+app/Telegram/Middleware/AdminMiddleware.php
+```
+
+Example middleware:
 
 ```php
-class CheckUser
+<?php
+
+namespace App\Telegram\Middleware;
+
+use Closure;
+
+class AdminMiddleware
 {
-    public function handle($update, $next, ...$parameters)
+    private const ADMIN_CHAT_ID = 123456789;
+
+    public function handle($update, Closure $next)
+    {
+        $chatId = $update->chatId();
+
+        if ($chatId !== self::ADMIN_CHAT_ID) {
+            return null;
+        }
+
+        return $next($update);
+    }
+}
+```
+
+Replace `123456789` with the Telegram Chat ID that should have admin access.
+
+### How it works
+
+The middleware receives two main values:
+
+```php
+public function handle($update, Closure $next)
+```
+
+- `$update` is the current `TelegramUpdate` object.
+- `$next` is the next step in the middleware pipeline.
+
+If the request is allowed, call:
+
+```php
+return $next($update);
+```
+
+This continues processing.
+
+If the request must be blocked, do not call `$next()`:
+
+```php
+return null;
+```
+
+This stops the pipeline. The controller or next middleware will not run.
+
+## Admin Middleware Example
+
+A typical admin-only route can be written as:
+
+```php
+use App\Http\Controllers\Telegram\AdminController;
+use App\Telegram\Middleware\AdminMiddleware;
+use ReyhanTeam\TelegramBotRouter\TelegramBot as BOT;
+
+BOT::middleware([
+    AdminMiddleware::class,
+])->onCommand('admin', [AdminController::class, 'index']);
+```
+
+The flow is:
+
+```text
+Telegram Update
+      ↓
+AdminMiddleware
+      ↓
+Is Chat ID the admin Chat ID?
+      │
+   ┌──┴──┐
+  Yes    No
+   │      │
+   ▼      ▼
+ $next   STOP
+   │
+   ▼
+AdminController
+```
+
+This is useful for admin panels, management commands, configuration commands, and other protected bot features.
+
+> **Security note:** Keep the admin Chat ID in Laravel configuration or environment variables for production applications. Do not hard-code secrets or bot tokens in middleware.
+
+For example:
+
+```env
+TELEGRAM_ADMIN_CHAT_ID=123456789
+```
+
+Then use configuration instead of a hard-coded value:
+
+```php
+$adminChatId = config('telegram-bot.admin_chat_id');
+```
+
+## Middleware Contract
+
+A middleware can optionally implement the package contract:
+
+```php
+use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareInterface;
+
+class CheckUser implements TelegramMiddlewareInterface
+{
+    public function handle($update, Closure $next, ...$parameters)
     {
         return $next($update);
     }
 }
 ```
 
-A middleware can stop processing by not calling `$next()`.
+The contract is optional. A class with a compatible `handle()` method can also be used.
 
 ## Route Middleware
 
