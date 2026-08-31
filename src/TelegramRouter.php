@@ -5,6 +5,7 @@ namespace ReyhanTeam\TelegramBotRouter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager;
+use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRouteException;
 use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
@@ -33,6 +34,7 @@ class TelegramRouter
         }
         $this->update = new TelegramUpdate($data);
         TelegramBot::setApplication(app());
+        event(new UpdateReceived($this->update));
         try { $this->dispatch($this->update); } catch (Throwable $e) { $this->handleException($e, ['source' => 'router']); }
         return response()->json(['ok' => true]);
     }
