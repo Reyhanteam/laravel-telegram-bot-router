@@ -47,6 +47,7 @@ class TelegramRouter
                 'callback' => fn (TelegramUpdate $update) => $conversationManager->handle($update),
                 'pattern' => 'conversation',
                 'middleware' => [],
+                'constraints' => [],
             ], $update);
             return;
         }
@@ -69,11 +70,11 @@ class TelegramRouter
         }
 
         if ($fallback = TelegramBot::getFallback()) {
-            $this->execute(['callback' => $fallback, 'pattern' => 'fallback', 'middleware' => []], $update);
+            $this->execute(['callback' => $fallback, 'pattern' => 'fallback', 'middleware' => [], 'constraints' => []], $update);
             return;
         }
         if ($onInvalid = TelegramBot::getOnInvalid()) {
-            $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => []], $update);
+            $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => [], 'constraints' => []], $update);
             return;
         }
         Log::info('No matching route found', ['update_type' => $this->getUpdateType($update)]);
@@ -88,11 +89,15 @@ class TelegramRouter
     {
         $type = $route['type'] ?? null;
         $pattern = $route['pattern'] ?? null;
+        $constraints = $route['constraints'] ?? [];
 
         switch ($type) {
             case 'callback_query':
                 if (!isset($update->callback_query)) return -1;
-                return $pattern === null || $pattern === '' ? 10 : $this->patternScore($pattern, (string) ($update->callback_query->data ?? ''), $update);
+                if ($pattern === null || $pattern === '') {
+                    return empty($constraints) ? 10 : -1;
+                }
+                return $this->patternScore($pattern, (string) ($update->callback_query->data ?? ''), $update, $constraints);
 
             case 'command':
                 if (!isset($update->message->text)) return -1;
@@ -107,18 +112,20 @@ class TelegramRouter
                     $command = explode('@', $command, 2)[0];
                 }
 
-                return $command === $pattern ? 100 : -1;
+                if ($command !== $pattern) return -1;
+
+                return empty($constraints) ? 100 : -1;
 
             case 'text':
                 if (!isset($update->message->text)) return -1;
 
-                return $this->patternScore($pattern, trim((string) $update->message->text), $update);
+                return $this->patternScore($pattern, trim((string) $update->message->text), $update, $constraints);
         }
 
         return -1;
     }
 
-    protected function patternScore(?string $pattern, string $text, TelegramUpdate $update): int
+    protected function patternScore(?string $pattern, string $text, TelegramUpdate $update, array $constraints = []): int
     {
         if ($pattern === null) return -1;
 
@@ -126,12 +133,15 @@ class TelegramRouter
         $text = trim($text);
 
         if (!$this->isRegex($pattern)) {
-            return $pattern === $text ? 100 : -1;
+            if ($pattern !== $text || !empty($constraints)) return -1;
+            return 100;
         }
 
         $result = @preg_match($pattern, $text, $matches);
 
         if ($result === 1) {
+            if (!$this->constraintsMatch($constraints, $matches)) return -1;
+
             $update->matches = $matches;
             return 50;
         }
@@ -144,6 +154,20 @@ class TelegramRouter
         }
 
         return -1;
+    }
+
+    protected function constraintsMatch(array $constraints, array $matches): bool
+    {
+        foreach ($constraints as $name => $expression) {
+            if (!array_key_exists($name, $matches)) return false;
+
+            $value = (string) $matches[$name];
+            $result = @preg_match('/^(?:'.$expression.')$/', $value);
+
+            if ($result !== 1) return false;
+        }
+
+        return true;
     }
 
     protected function matchPattern(string $pattern, string $text, TelegramUpdate $update): bool
