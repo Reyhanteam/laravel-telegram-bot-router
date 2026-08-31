@@ -1041,6 +1041,111 @@ php artisan reyhan:start-polling
 - [x] Conversation events
 - [x] More storage driver controls
 
+## 🟠 Priority 4 — Exception and Error Handling
+
+- [ ] Telegram route exceptions
+- [ ] Invalid update exceptions
+- [ ] Telegram API exceptions
+- [ ] Configurable exception handler
+- [ ] Safe logging
+- [ ] Never expose bot tokens in logs
+
+## 🟠 Priority 5 — Events
+
+- [ ] Update received event
+- [ ] Message received event
+- [ ] Command received event
+- [ ] Callback query event
+- [ ] Conversation started event
+- [ ] Conversation step event
+- [ ] Conversation finished event
+- [ ] Route matched event
+
+## 🟠 Priority 6 — Rate Limiting
+
+- [ ] Per-user limits
+- [ ] Per-chat limits
+- [ ] Per-command limits
+- [ ] Configurable limits
+- [ ] Laravel Cache integration
+
+## 🟠 Priority 7 — Telegram Route List
+
+```bash
+php artisan telegram:route:list
+```
+
+## 🟠 Priority 8 — Queue Support
+
+- [ ] Queue update processing
+- [ ] Queue message sending
+- [ ] Queue heavy bot tasks
+- [ ] Laravel queue integration
+
+## 🟡 Priority 9 — Named Telegram Routes
+
+```php
+BOT::onCommand('start', [StartController::class, 'index'])
+    ->name('telegram.start');
+```
+
+## 🟡 Priority 10 — Telegram Route Cache
+
+```bash
+php artisan telegram:route:cache
+php artisan telegram:route:clear
+```
+
+## 🟡 Priority 11 — More Telegram Update Types
+
+- [ ] Inline Query
+- [ ] Edited Message
+- [ ] Channel Post
+- [ ] Edited Channel Post
+- [ ] Chat Member
+- [ ] My Chat Member
+- [ ] Chat Join Request
+
+## 🟡 Priority 12 — Better Callback Query Routing
+
+- [ ] Exact callback data matching
+- [ ] Regular expression callback matching
+- [ ] Callback route parameters
+- [ ] Named callback routes
+- [ ] Better inline keyboard integration
+
+## 🟡 Priority 13 — User and Chat Conditions
+
+- [ ] Admin-only routes
+- [ ] User conditions
+- [ ] Private-chat conditions
+- [ ] Group-chat conditions
+- [ ] Channel conditions
+- [ ] User permission checks
+- [ ] Chat type constraints
+
+## 🟡 Priority 14 — Testing Tools
+
+- [ ] Telegram fake
+- [ ] Fake Telegram updates
+- [ ] Route dispatch assertions
+- [ ] Message sending assertions
+- [ ] Callback assertions
+- [ ] Conversation/state tests
+
+# Design Principles
+
+1. Keep Telegram routes separate from Laravel HTTP routes.
+2. Use Laravel's Service Container for controllers and middleware.
+3. Keep the public routing API simple.
+4. Keep route registration separate from update processing.
+5. Support Webhook and Polling through the same routing layer.
+6. Follow PSR-4 autoloading.
+7. Keep the code clean and maintainable.
+8. Keep Telegram-specific routing logic out of `routes/web.php`.
+9. Build advanced features on top of the core router.
+
+
 ## Status
 
 Priority 1, Priority 2, and Priority 3 features are implemented and tested in the current development cycle.
