@@ -3,6 +3,7 @@
 namespace ReyhanTeam\TelegramBotRouter\Middleware;
 
 use ReyhanTeam\TelegramBotRouter\TelegramBot;
+use ReyhanTeam\TelegramBotRouter\TelegramRouteRegistrar;
 
 class TelegramMiddlewareRegistrar
 {
@@ -10,18 +11,18 @@ class TelegramMiddlewareRegistrar
     {
     }
 
-    public function onCommand(string $command, $callback): void
+    public function onCommand(string $command, $callback): TelegramRouteRegistrar
     {
-        TelegramBot::addMiddlewareRoute('command', $command, $callback, $this->middleware);
+        return TelegramBot::addMiddlewareRoute('command', $command, $callback, $this->middleware);
     }
 
-    public function onText(string $pattern, $callback): void
+    public function onText(string $pattern, $callback): TelegramRouteRegistrar
     {
-        TelegramBot::addMiddlewareRoute('text', $pattern, $callback, $this->middleware);
+        return TelegramBot::addMiddlewareRoute('text', $pattern, $callback, $this->middleware);
     }
 
-    public function onCallbackQuery($callback): void
+    public function onCallbackQuery($callback): TelegramRouteRegistrar
     {
-        TelegramBot::addMiddlewareRoute('callback_query', null, $callback, $this->middleware);
+        return TelegramBot::addMiddlewareRoute('callback_query', null, $callback, $this->middleware);
     }
 }
