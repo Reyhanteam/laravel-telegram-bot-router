@@ -2,58 +2,19 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Telegram Bot Token
-    |--------------------------------------------------------------------------
-    */
-
     'token' => env('TELEGRAM_BOT_TOKEN', ''),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Mode: webhook or polling
-    |--------------------------------------------------------------------------
-    |
-    | Possible values:
-    |   - 'webhook'
-    |   - 'polling'
-    |
-    */
 
     'mode' => env('TELEGRAM_BOT_MODE', 'webhook'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Webhook Settings
-    |--------------------------------------------------------------------------
-    */
-
     'webhook' => [
-
-        // Your webhook endpoint inside Laravel
-        'path' => '/telegram/webhook',
-
-        // Set webhook URL in Telegram
+        'path' => env('TELEGRAM_WEBHOOK_PATH', '/telegram/webhook'),
         'url' => env('TELEGRAM_WEBHOOK_URL', ''),
-
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Polling Settings
-    |--------------------------------------------------------------------------
-    */
 
     'polling' => [
-
-        // Interval between polling requests (ms)
-        'interval' => 1500,
-
-        // Long polling timeout (seconds)
-        'timeout' => 30,
+        'interval' => (int) env('TELEGRAM_POLLING_INTERVAL', 1500),
+        'timeout' => (int) env('TELEGRAM_POLLING_TIMEOUT', 30),
+        'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
     ],
-
-    
 
 ];
