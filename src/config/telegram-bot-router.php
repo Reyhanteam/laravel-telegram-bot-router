@@ -17,4 +17,8 @@ return [
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
     ],
 
+    'conversation' => [
+        'ttl' => (int) env('TELEGRAM_CONVERSATION_TTL', 3600),
+    ],
+
 ];
