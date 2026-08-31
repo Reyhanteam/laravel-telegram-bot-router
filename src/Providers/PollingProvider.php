@@ -2,6 +2,10 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
+use ReyhanTeam\TelegramBotRouter\Events\CallbackQueryReceived;
+use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
+use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
+use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
 use ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
@@ -43,7 +47,26 @@ class PollingProvider
 
                     echo 'New update received: '.$update['update_id'].PHP_EOL;
                     $offset = (int) $update['update_id'] + 1;
-                    $this->router->dispatch(TelegramUpdate::fromArray($update));
+                    $telegramUpdate = TelegramUpdate::fromArray($update);
+
+                    event(new UpdateReceived($telegramUpdate));
+
+                    if (isset($telegramUpdate->message)) {
+                        event(new MessageReceived($telegramUpdate));
+
+                        if (
+                            isset($telegramUpdate->message->text)
+                            && str_starts_with(trim((string) $telegramUpdate->message->text), '/')
+                        ) {
+                            event(new CommandReceived($telegramUpdate));
+                        }
+                    }
+
+                    if (isset($telegramUpdate->callback_query)) {
+                        event(new CallbackQueryReceived($telegramUpdate));
+                    }
+
+                    $this->router->dispatch($telegramUpdate);
                 }
             } catch (Throwable $e) {
                 $this->router->handleException($e, ['source' => 'polling']);
