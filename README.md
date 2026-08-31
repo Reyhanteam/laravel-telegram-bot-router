@@ -1,6 +1,6 @@
 # Laravel Telegram Bot Router
 
-## Version 1.0.8
+## Version 1.1.1
 
 > **Status:** Webhook, Polling, Telegram Middleware, and Conversation State are working in the current development version.
 
@@ -24,6 +24,7 @@
 - ✅ Wait for next message
 - ✅ Conversation timeout
 - ✅ Conversation data
+- ✅ Improved route matching
 
 ## About
 
@@ -86,6 +87,28 @@ BOT::onCommand('/help', [HelpController::class, 'index']);
 
 The package normalizes the optional `/` prefix.
 
+The command matcher reads only the command token. This means extra whitespace or command arguments do not prevent the command route from matching:
+
+```text
+/start
+/start hello
+/start    hello
+```
+
+Command arguments are not extracted yet. Argument extraction is planned for a future route feature.
+
+Bot usernames are also ignored when matching commands:
+
+```text
+/start@MyBot
+```
+
+matches:
+
+```php
+BOT::onCommand('start', [StartController::class, 'index']);
+```
+
 ### Text
 
 `onText()` receives two arguments:
@@ -129,6 +152,51 @@ BOT::onInvalid(function ($update) {
     // Handle invalid updates.
 });
 ```
+
+## Improved Route Matching
+
+The router now evaluates all registered routes and selects the most specific matching route instead of always using the first matching route.
+
+Current matching priority is:
+
+```text
+Exact command/text match
+        ↓
+Regular expression text/callback match
+        ↓
+Generic callback-query route
+```
+
+For example:
+
+```php
+BOT::onText('/^hello/i', [MessageController::class, 'generic']);
+BOT::onText('hello', [MessageController::class, 'exact']);
+```
+
+For the message:
+
+```text
+hello
+```
+
+the exact `hello` route is selected.
+
+This prevents a broad regular expression route from taking a message that has a more specific exact route.
+
+Route registration order remains the tie-breaker when routes have the same match score.
+
+### Command Matching Details
+
+Command matching is normalized as follows:
+
+1. Leading and trailing whitespace is removed.
+2. The command must start with `/`.
+3. The command token is separated from the rest of the message.
+4. A Telegram bot username after `@` is ignored.
+5. The normalized command is compared with the registered command.
+
+This prepares the router for the next routing features without changing the current public API.
 
 ## Controllers
 
@@ -289,8 +357,6 @@ Is Chat ID the admin Chat ID?
    ▼
 AdminController
 ```
-
-This is useful for admin panels, management commands, configuration commands, and other protected bot features.
 
 > **Security note:** Keep the admin Chat ID in Laravel configuration or environment variables for production applications. Do not hard-code secrets or bot tokens in middleware.
 
@@ -561,10 +627,10 @@ The roadmap is ordered by implementation priority.
 - [x] Dependency Injection for controller methods
 - [x] Regular expression matching for text routes
 - [x] `TelegramUpdate` wrapper
+- [x] Better route matching
 
 Planned improvements:
 
-- [ ] Better route matching
 - [ ] Route constraints
 - [ ] Command arguments
 - [ ] Route parameters
