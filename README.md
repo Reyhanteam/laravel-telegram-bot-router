@@ -2,24 +2,40 @@
 
 ## Version 1.0.8
 
-> **Status:** Webhook, Polling, and the first Middleware layer are working in the current development version.
->
-> - ✅ Webhook
-> - ✅ Polling
-> - ✅ Telegram route middleware
-> - ✅ Global Telegram middleware
-> - ⏳ Middleware groups
-> - ⏳ Middleware parameters
->
-> Current package compatibility is defined by `composer.json`: PHP `^8.1`, Laravel `12.x` / `13.x`, and `irazasyed/telegram-bot-sdk` `^3.15`.
+> **Status:** Webhook, Polling, and the first Telegram Middleware system are working in the current development version.
+
+- ✅ Webhook
+- ✅ Polling
+- ✅ `routes/bot.php`
+- ✅ `BOT::onCommand()`
+- ✅ `BOT::onText()`
+- ✅ `BOT::onCallbackQuery()`
+- ✅ `BOT::fallback()`
+- ✅ `BOT::onInvalid()`
+- ✅ Route middleware
+- ✅ Global middleware
+- ✅ Middleware pipeline
+- ✅ Middleware groups
+- ✅ Nested middleware groups
+- ✅ Middleware parameters
 
 ## About
 
 `laravel-telegram-bot-router` is a Laravel package for routing Telegram bot updates in a Laravel-style way.
 
-The package keeps Telegram bot routes separate from Laravel HTTP routes. Telegram routes are defined in `routes/bot.php`, while normal Laravel HTTP routes remain in `routes/web.php`.
+Telegram routes are kept separate from Laravel HTTP routes:
 
-The package can receive Telegram updates through **Webhook** or **Polling** and send each update to the matching Telegram route.
+```text
+routes/web.php  -> Laravel HTTP routes
+routes/bot.php  -> Telegram bot routes
+```
+
+The package supports both Telegram update modes:
+
+- **Webhook:** Telegram sends updates to Laravel.
+- **Polling:** The package continuously requests updates from Telegram.
+
+Both modes use the same Telegram routing layer.
 
 ## Installation
 
@@ -45,70 +61,28 @@ This creates:
 routes/bot.php
 ```
 
-## Configuration
+## Basic Routing
 
-The package uses `config/telegram-bot-router.php`.
-
-```env
-TELEGRAM_BOT_TOKEN=your-bot-token
-TELEGRAM_BOT_MODE=webhook
-TELEGRAM_WEBHOOK_PATH=/telegram/webhook
-TELEGRAM_WEBHOOK_URL=https://example.com/telegram/webhook
-TELEGRAM_POLLING_INTERVAL=1500
-TELEGRAM_POLLING_TIMEOUT=30
-```
-
-Supported modes:
-
-```text
-webhook
-polling
-```
-
-## Telegram Bot Routes
-
-The Telegram router class is `TelegramBot`. In `routes/bot.php`, use the `BOT` alias:
+Use the `BOT` alias in `routes/bot.php`:
 
 ```php
 use ReyhanTeam\TelegramBotRouter\TelegramBot as BOT;
 ```
 
-### Command
+### Commands
 
-`onCommand()` accepts **two arguments**:
-
-1. Command
-2. Callback
-
-For a controller action, pass the controller and method as one array:
+`onCommand()` receives two arguments:
 
 ```php
 BOT::onCommand('start', [StartController::class, 'index']);
+BOT::onCommand('/help', [HelpController::class, 'index']);
 ```
 
-The command can include `/` or omit it:
-
-```php
-BOT::onCommand('/start', [StartController::class, 'index']);
-BOT::onCommand('help', [HelpController::class, 'index']);
-```
-
-A Closure can also be used:
-
-```php
-BOT::onCommand('start', function ($update) {
-    // Handle /start
-});
-```
+The package normalizes the optional `/` prefix.
 
 ### Text
 
-`onText()` also accepts **two arguments**:
-
-1. Text or regular expression pattern
-2. Callback
-
-Controller example:
+`onText()` receives two arguments:
 
 ```php
 BOT::onText('hello', [MessageController::class, 'handle']);
@@ -120,25 +94,15 @@ Regular expressions are supported:
 BOT::onText('/^hello/i', [MessageController::class, 'handle']);
 ```
 
-When a regular expression matches, the matches are available from `$update->matches`.
+Regex matches are available through `$update->matches`.
 
 ### Callback Query
-
-Register a callback-query handler with:
 
 ```php
 BOT::onCallbackQuery([ProfileController::class, 'show']);
 ```
 
-Or use a Closure:
-
-```php
-BOT::onCallbackQuery(function ($update) {
-    // Handle callback query
-});
-```
-
-Read callback data with:
+Callback data can be read with:
 
 ```php
 $update->callbackQueryData();
@@ -146,167 +110,29 @@ $update->callbackQueryData();
 
 ### Fallback
 
-A fallback handler runs when no registered route matches the update:
-
 ```php
 BOT::fallback(function ($update) {
-    // Handle unmatched updates
+    // Handle unmatched updates.
 });
 ```
 
 ### Invalid Updates
 
-An invalid-update handler can be registered with:
-
 ```php
 BOT::onInvalid(function ($update) {
-    // Handle invalid updates
+    // Handle invalid updates.
 });
 ```
-
-## Middleware
-
-Telegram routes can use middleware in the same routing layer as commands and text handlers.
-
-### Route Middleware
-
-Attach middleware to a route with `BOT::middleware()`:
-
-```php
-BOT::middleware([
-    CheckUser::class,
-    IsAdmin::class,
-])->onCommand('admin', [AdminController::class, 'index']);
-```
-
-The `middleware()` call receives an array of middleware classes or middleware objects. The returned registrar supports the current route types:
-
-```php
-BOT::middleware([CheckUser::class])
-    ->onCommand('profile', [ProfileController::class, 'index']);
-
-BOT::middleware([CheckUser::class])
-    ->onText('hello', [MessageController::class, 'handle']);
-
-BOT::middleware([CheckUser::class])
-    ->onCallbackQuery([CallbackController::class, 'handle']);
-```
-
-A middleware must provide a `handle()` method:
-
-```php
-class CheckUser
-{
-    public function handle($update, $next)
-    {
-        // Check the Telegram user.
-
-        return $next($update);
-    }
-}
-```
-
-A middleware can stop the request by not calling `$next()`.
-
-The execution order is:
-
-```text
-Telegram Update
-      ↓
-Global Middleware
-      ↓
-Route Middleware
-      ↓
-Controller / Closure
-```
-
-### Middleware Order
-
-If multiple middleware are registered, they run in the order in which they are defined:
-
-```php
-BOT::middleware([
-    FirstMiddleware::class,
-    SecondMiddleware::class,
-])->onCommand('start', [StartController::class, 'index']);
-```
-
-Execution:
-
-```text
-FirstMiddleware
-      ↓
-SecondMiddleware
-      ↓
-Controller
-```
-
-When `$next()` returns, the call can continue back through the middleware in reverse order.
-
-### Global Middleware
-
-Global middleware runs for every registered Telegram route:
-
-```php
-BOT::globalMiddleware([
-    LogTelegramUpdate::class,
-    CheckBotState::class,
-]);
-```
-
-Global middleware runs before route-specific middleware.
-
-### Middleware Contract
-
-The package provides an optional contract:
-
-```php
-use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareInterface;
-
-class CheckUser implements TelegramMiddlewareInterface
-{
-    public function handle(\ReyhanTeam\TelegramBotRouter\TelegramUpdate $update, \Closure $next): mixed
-    {
-        return $next($update);
-    }
-}
-```
-
-The pipeline also follows the familiar Laravel middleware pattern and requires a `handle()` method.
-
-### Middleware Groups and Parameters
-
-These are planned for the next Middleware iterations:
-
-- [ ] Middleware groups
-- [ ] Nested middleware groups
-- [ ] Middleware parameters
-- [ ] Named middleware aliases
-- [ ] Middleware configuration
 
 ## Controllers
 
 Controller actions use Laravel's Service Container.
 
-Example:
-
 ```php
 BOT::onCommand('start', [StartController::class, 'index']);
 ```
 
-The router resolves the controller through Laravel and calls the selected method. The current Telegram update is passed as the `update` argument.
-
-```php
-class StartController
-{
-    public function index($update)
-    {
-        // $update contains the Telegram update.
-    }
-}
-```
-
-Laravel dependency injection can also be used:
+The Telegram update is injected as the `update` argument. Other dependencies can also be resolved by Laravel:
 
 ```php
 public function index(MyService $service, $update)
@@ -319,7 +145,7 @@ public function index(MyService $service, $update)
 
 Telegram updates are wrapped by `TelegramUpdate`.
 
-Useful methods:
+Useful methods include:
 
 ```php
 $update->chatId();
@@ -330,7 +156,7 @@ $update->callbackQueryData();
 $update->originalUpdate();
 ```
 
-Nested properties are also available:
+Nested Telegram properties can also be accessed:
 
 ```php
 $update->message->chat->id;
@@ -338,17 +164,193 @@ $update->message->from->id;
 $update->message->text;
 ```
 
+# Middleware
+
+The Telegram middleware system follows the Laravel middleware pattern.
+
+Execution order:
+
+```text
+Telegram Update
+      ↓
+Global Middleware
+      ↓
+Group Middleware
+      ↓
+Route Middleware
+      ↓
+Controller / Closure
+```
+
+A middleware must provide a `handle()` method:
+
+```php
+class CheckUser
+{
+    public function handle($update, $next, ...$parameters)
+    {
+        // Check the Telegram user.
+
+        return $next($update);
+    }
+}
+```
+
+A middleware can stop processing by not calling `$next()`.
+
+## Route Middleware
+
+Attach middleware to one or more route types:
+
+```php
+BOT::middleware([
+    CheckUser::class,
+    IsAdmin::class,
+])->onCommand('admin', [AdminController::class, 'index']);
+```
+
+Text and callback routes are also supported:
+
+```php
+BOT::middleware([CheckUser::class])
+    ->onText('hello', [MessageController::class, 'handle']);
+
+BOT::middleware([CheckUser::class])
+    ->onCallbackQuery([CallbackController::class, 'handle']);
+```
+
+## Global Middleware
+
+Global middleware runs for every registered Telegram route:
+
+```php
+BOT::globalMiddleware([
+    LogTelegramUpdate::class,
+    CheckBotState::class,
+]);
+```
+
+Global middleware runs before group and route middleware.
+
+## Middleware Groups
+
+Groups apply the same middleware to multiple routes.
+
+```php
+BOT::group([
+    AdminMiddleware::class,
+    LogTelegramUpdate::class,
+], function () {
+    BOT::onCommand('users', [UserController::class, 'index']);
+    BOT::onCommand('stats', [StatsController::class, 'index']);
+});
+```
+
+This keeps route definitions clean and avoids repeating middleware.
+
+## Nested Middleware Groups
+
+Groups can be nested. Inner middleware is added after outer middleware:
+
+```php
+BOT::group([AuthTelegramUser::class], function () {
+
+    BOT::onCommand('profile', [ProfileController::class, 'index']);
+
+    BOT::group([IsAdmin::class], function () {
+        BOT::onCommand('admin', [AdminController::class, 'index']);
+    });
+
+});
+```
+
+For the `admin` route the order is:
+
+```text
+AuthTelegramUser
+      ↓
+IsAdmin
+      ↓
+AdminController
+```
+
+## Middleware Parameters
+
+Middleware parameters can be passed after the middleware class using `:` and comma-separated values.
+
+Example:
+
+```php
+BOT::middleware([
+    HasPermission::class . ':users.create',
+])->onCommand('create-user', [UserController::class, 'create']);
+```
+
+The middleware receives the parameters after `$next`:
+
+```php
+class HasPermission
+{
+    public function handle($update, $next, ...$parameters)
+    {
+        $permission = $parameters[0] ?? null;
+
+        // Check permission...
+
+        return $next($update);
+    }
+}
+```
+
+Multiple parameters are supported:
+
+```php
+BOT::middleware([
+    HasRole::class . ':admin,moderator',
+])->onCommand('panel', [PanelController::class, 'index']);
+```
+
+The middleware receives:
+
+```text
+admin
+moderator
+```
+
+Middleware classes are resolved through Laravel's Service Container. Middleware objects are also supported.
+
+## Middleware Contract
+
+The package provides an optional contract:
+
+```php
+use ReyhanTeam\TelegramBotRouter\Middleware\TelegramMiddlewareInterface;
+
+class CheckUser implements TelegramMiddlewareInterface
+{
+    public function handle(
+        TelegramUpdate $update,
+        \Closure $next,
+        ...$parameters
+    ): mixed {
+        return $next($update);
+    }
+}
+```
+
+The contract supports middleware parameters through the variadic `$parameters` argument.
+
 ## Webhook
 
-In webhook mode, the configured webhook path is registered in Laravel and incoming Telegram updates are passed to the Telegram router.
+Webhook mode receives Telegram updates through the configured Laravel route.
 
-Default path:
+Default endpoint:
 
 ```text
 POST /telegram/webhook
 ```
 
-The route can also be registered with:
+Register the webhook route with:
 
 ```bash
 php artisan reyhan:setWebhookRoute
@@ -356,45 +358,47 @@ php artisan reyhan:setWebhookRoute
 
 ## Polling
 
-Polling continuously requests Telegram updates and sends them to the same Telegram router.
-
 Start polling with:
 
 ```bash
 php artisan reyhan:start-polling
 ```
 
-Polling uses the configured interval, long-polling timeout, and Telegram API URL.
+Polling continuously requests updates from Telegram and dispatches them through the same router used by Webhook mode.
 
 ## Architecture
 
 ```text
-Telegram
-   │
-   ├── Webhook ──► Laravel Route ──┐
-   │                               │
-   └── Polling ────────────────────┤
-                                   ▼
-                            TelegramRouter
-                                   │
-                                   ▼
-                              TelegramBot
-                                   │
-                              Route Match
-                                   │
-                          Global Middleware
-                                   │
-                          Route Middleware
-                                   │
-                                   ▼
-                         Controller / Closure
+                         Telegram
+                            │
+                 ┌──────────┴──────────┐
+                 │                     │
+              Webhook               Polling
+                 │                     │
+                 └──────────┬──────────┘
+                            ▼
+                    Telegram Router
+                            │
+                     Route Matching
+                            │
+                            ▼
+                  Global Middleware
+                            │
+                            ▼
+                   Group Middleware
+                            │
+                            ▼
+                   Route Middleware
+                            │
+                            ▼
+                 Controller / Closure
 ```
 
-The goal is to give Telegram bots their own routing layer without mixing bot logic with `routes/web.php`.
+The package keeps Telegram bot routing separate from `routes/web.php` while using Laravel's Service Container and application structure.
 
 # Feature Roadmap
 
-The roadmap is ordered by implementation priority. The top items should be implemented first because later features depend on them.
+The roadmap is ordered by implementation priority.
 
 ## 🔴 Priority 1 — Core Telegram Routing
 
@@ -415,7 +419,7 @@ The roadmap is ordered by implementation priority. The top items should be imple
 - [x] Regular expression matching for text routes
 - [x] `TelegramUpdate` wrapper
 
-### Planned improvements
+Planned improvements:
 
 - [ ] Better route matching
 - [ ] Route constraints
@@ -431,52 +435,21 @@ The roadmap is ordered by implementation priority. The top items should be imple
 - [x] Global Telegram middleware
 - [x] Middleware classes resolved through Laravel Container
 - [x] Middleware objects
-- [x] Middleware short-circuit by not calling `$next()`
+- [x] Middleware short-circuit
 - [x] Middleware execution order
 - [x] Optional `TelegramMiddlewareInterface`
+- [x] Middleware groups
+- [x] Nested middleware groups
+- [x] Middleware parameters
 
-### Planned
+Planned:
 
-- [ ] Middleware groups
-- [ ] Nested middleware groups
-- [ ] Middleware parameters
 - [ ] Named middleware aliases
 - [ ] Middleware configuration
 
-Example:
+## 🔴 Priority 3 — Conversation / State / Wait for Next Message ⭐⭐⭐
 
-```php
-BOT::middleware([
-    CheckUser::class,
-    IsAdmin::class,
-])->onCommand('admin', [AdminController::class, 'index']);
-```
-
-## 🔴 Priority 3 — Route Groups
-
-Add Laravel-style groups for Telegram routes.
-
-- [ ] Route groups
-- [ ] Shared middleware
-- [ ] Nested groups
-- [ ] Shared route options
-
-Example target API:
-
-```php
-BOT::group([
-    'middleware' => [AdminMiddleware::class],
-], function () {
-    BOT::onCommand('users', [UserController::class, 'index']);
-    BOT::onCommand('stats', [StatsController::class, 'index']);
-});
-```
-
-## 🔴 Priority 4 — Conversation / State / Wait for Next Message ⭐⭐⭐
-
-This is a major feature for interactive Telegram bots.
-
-The bot must be able to ask the user for information and then wait for the user's next message.
+The bot should be able to ask the user for information and wait for the user's next message.
 
 Example:
 
@@ -487,17 +460,15 @@ Bot: Please enter your phone number.
 User: 0912...
 ```
 
-The router must remember the user's current state. When the next update arrives, it must be possible to route that update to the current conversation step instead of treating it as an unrelated normal message.
-
 Planned features:
 
 - [ ] Per-user conversation state
 - [ ] Conversation steps
-- [ ] Wait for the next message
-- [ ] Save the current step
-- [ ] Move to the next step
-- [ ] Finish a conversation
-- [ ] Cancel a conversation
+- [ ] Wait for next message
+- [ ] Save current step
+- [ ] Move to next step
+- [ ] Finish conversation
+- [ ] Cancel conversation
 - [ ] Conversation timeout
 - [ ] Conversation data
 - [ ] Input validation
@@ -512,27 +483,18 @@ BOT::conversation('register')
     ->step(3, [RegisterController::class, 'finish']);
 ```
 
-Another possible design:
+The exact API will be decided during implementation.
 
-```php
-BOT::onCommand('register', [RegisterController::class, 'start'])
-    ->waitForNextMessage([RegisterController::class, 'name']);
-```
-
-The exact API will be decided during implementation. The requirement is that the router can remember that a user is waiting for the next message.
-
-## 🔴 Priority 5 — Exception and Error Handling
+## 🟠 Priority 4 — Exception and Error Handling
 
 - [ ] Telegram route exceptions
 - [ ] Invalid update exceptions
 - [ ] Telegram API exceptions
-- [ ] Configurable Telegram exception handler
+- [ ] Configurable exception handler
 - [ ] Safe logging
 - [ ] Never expose bot tokens in logs
 
-## 🟠 Priority 6 — Events
-
-Integrate Telegram routing with Laravel Events.
+## 🟠 Priority 5 — Events
 
 - [ ] Update received event
 - [ ] Message received event
@@ -541,9 +503,7 @@ Integrate Telegram routing with Laravel Events.
 - [ ] Route matched event
 - [ ] Route dispatched event
 
-## 🟠 Priority 7 — Rate Limiting
-
-Protect bots from message spam and excessive requests.
+## 🟠 Priority 6 — Rate Limiting
 
 - [ ] Per-user limits
 - [ ] Per-chat limits
@@ -551,7 +511,7 @@ Protect bots from message spam and excessive requests.
 - [ ] Configurable limits
 - [ ] Laravel Cache integration
 
-## 🟠 Priority 8 — Telegram Route List
+## 🟠 Priority 7 — Telegram Route List
 
 Provide a command similar to Laravel's `route:list`:
 
@@ -559,34 +519,28 @@ Provide a command similar to Laravel's `route:list`:
 php artisan telegram:route:list
 ```
 
-## 🟠 Priority 9 — Queue Support
-
-Support Laravel queues for long-running or expensive Telegram operations.
+## 🟠 Priority 8 — Queue Support
 
 - [ ] Queue update processing
 - [ ] Queue message sending
 - [ ] Queue heavy bot tasks
 - [ ] Laravel queue integration
 
-## 🟡 Priority 10 — Named Telegram Routes
-
-Add route names.
+## 🟡 Priority 9 — Named Telegram Routes
 
 ```php
 BOT::onCommand('start', [StartController::class, 'index'])
     ->name('telegram.start');
 ```
 
-## 🟡 Priority 11 — Telegram Route Cache
-
-Support production route caching.
+## 🟡 Priority 10 — Telegram Route Cache
 
 ```bash
 php artisan telegram:route:cache
 php artisan telegram:route:clear
 ```
 
-## 🟡 Priority 12 — More Telegram Update Types
+## 🟡 Priority 11 — More Telegram Update Types
 
 - [ ] Inline Query
 - [ ] Edited Message
@@ -597,7 +551,7 @@ php artisan telegram:route:clear
 - [ ] Chat Join Request
 - [ ] Other future Telegram update types
 
-## 🟡 Priority 13 — Better Callback Query Routing
+## 🟡 Priority 12 — Better Callback Query Routing
 
 - [ ] Exact callback data matching
 - [ ] Regular expression callback matching
@@ -605,7 +559,7 @@ php artisan telegram:route:clear
 - [ ] Named callback routes
 - [ ] Better inline keyboard integration
 
-## 🟡 Priority 14 — User and Chat Conditions
+## 🟡 Priority 13 — User and Chat Conditions
 
 - [ ] Admin-only routes
 - [ ] User conditions
@@ -615,7 +569,7 @@ php artisan telegram:route:clear
 - [ ] User permission checks
 - [ ] Chat type constraints
 
-## 🟡 Priority 15 — Testing Tools
+## 🟡 Priority 14 — Testing Tools
 
 - [ ] Telegram fake
 - [ ] Fake Telegram updates
@@ -634,7 +588,7 @@ php artisan telegram:route:clear
 6. Follow PSR-4 autoloading.
 7. Keep code clean and maintainable.
 8. Keep Telegram-specific routing logic out of `routes/web.php`.
-9. Build advanced features such as Middleware and Conversation State on top of the core router.
+9. Build advanced features on top of the core router.
 
 ## Current Public API
 
@@ -646,9 +600,10 @@ BOT::fallback($callback);
 BOT::onInvalid($callback);
 BOT::middleware($middleware);
 BOT::globalMiddleware($middleware);
+BOT::group($middleware, $routes);
 ```
 
-For controller actions, `$callback` is:
+Controller callbacks use:
 
 ```php
 [ControllerClass::class, 'method']
@@ -660,11 +615,11 @@ Example:
 use ReyhanTeam\TelegramBotRouter\TelegramBot as BOT;
 
 BOT::onCommand('start', [StartController::class, 'index']);
-BOT::onText('hello', [MessageController::class, 'handle']);
-BOT::onCallbackQuery([ProfileController::class, 'show']);
 
 BOT::middleware([CheckUser::class])
     ->onCommand('profile', [ProfileController::class, 'index']);
-```
 
-This section describes the API implemented in the current code. Roadmap APIs are proposals until implemented.
+BOT::group([IsAdmin::class], function () {
+    BOT::onCommand('admin', [AdminController::class, 'index']);
+});
+```
