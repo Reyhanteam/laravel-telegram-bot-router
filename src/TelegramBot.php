@@ -19,6 +19,7 @@ class TelegramBot
     protected static array $middlewareAliases = [];
     protected static array $middlewareGroupStack = [];
     protected static array $conversations = [];
+    protected static array $conversationCancelCommands = [];
     protected static $fallback = null;
 
     public static function onCommand(string $command, $callback): TelegramRouteRegistrar
@@ -98,6 +99,25 @@ class TelegramBot
         return static::$conversations;
     }
 
+    public static function cancelConversation(TelegramUpdate $update): bool
+    {
+        return app(\ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager::class)->cancel($update);
+    }
+
+    public static function cancelConversationOnCommand(string $command): void
+    {
+        $command = '/'.ltrim($command, '/');
+
+        if (!in_array($command, static::$conversationCancelCommands, true)) {
+            static::$conversationCancelCommands[] = $command;
+        }
+    }
+
+    public static function getConversationCancelCommands(): array
+    {
+        return static::$conversationCancelCommands;
+    }
+
     public static function getGlobalMiddleware(): array
     {
         return static::$globalMiddleware;
@@ -159,87 +179,41 @@ class TelegramBot
 
     protected static function isRegexPattern(string $pattern): bool
     {
-        if (strlen($pattern) < 3) {
-            return false;
-        }
-
+        if (strlen($pattern) < 3) return false;
         $delimiter = $pattern[0];
-        if (ctype_alnum($delimiter) || $delimiter === '\\') {
-            return false;
-        }
-
-        $length = strlen($pattern);
-        $escaped = false;
-
+        if (ctype_alnum($delimiter) || $delimiter === '\\') return false;
+        $length = strlen($pattern); $escaped = false;
         for ($i = 1; $i < $length; $i++) {
             $char = $pattern[$i];
-
-            if ($escaped) {
-                $escaped = false;
-                continue;
-            }
-
-            if ($char === '\\') {
-                $escaped = true;
-                continue;
-            }
-
+            if ($escaped) { $escaped = false; continue; }
+            if ($char === '\\') { $escaped = true; continue; }
             if ($char === $delimiter) {
                 $modifiers = substr($pattern, $i + 1);
                 return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1;
             }
         }
-
         return false;
     }
 
     protected static function getGroupMiddleware(array $middleware = []): array
     {
         $groupMiddleware = [];
-
         foreach (static::$middlewareGroupStack as $group) {
             $groupMiddleware = array_merge($groupMiddleware, $group);
         }
-
         return array_merge($groupMiddleware, $middleware);
     }
 
     public static function addConstraint(int $routeIndex, string $name, string $expression): void
     {
-        if (!isset(static::$routes[$routeIndex])) {
-            throw new \OutOfBoundsException('Telegram route does not exist.');
-        }
-
+        if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.');
         static::$routes[$routeIndex]['constraints'][$name] = $expression;
     }
 
-    public static function getRoutes(): array
-    {
-        return static::$routes;
-    }
-
-    public static function getFallback(): ?callable
-    {
-        return static::$fallback;
-    }
-
-    public static function setApplication(Container $app): void
-    {
-        static::$app = $app;
-    }
-
-    public static function getApplication(): ?Container
-    {
-        return static::$app;
-    }
-
-    public static function onInvalid($callback): void
-    {
-        self::$onInvalidAction = $callback;
-    }
-
-    public static function getOnInvalid()
-    {
-        return self::$onInvalidAction;
-    }
+    public static function getRoutes(): array { return static::$routes; }
+    public static function getFallback(): ?callable { return static::$fallback; }
+    public static function setApplication(Container $app): void { static::$app = $app; }
+    public static function getApplication(): ?Container { return static::$app; }
+    public static function onInvalid($callback): void { self::$onInvalidAction = $callback; }
+    public static function getOnInvalid() { return self::$onInvalidAction; }
 }
