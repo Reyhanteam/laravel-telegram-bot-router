@@ -31,6 +31,7 @@ class TelegramRouterServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerConfiguredMiddlewareAliases();
         $this->loadBotRoutes();
 
         if (config('telegram-bot-router.mode') === 'webhook') {
@@ -43,6 +44,17 @@ class TelegramRouterServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->publishResources();
         }
+    }
+
+    protected function registerConfiguredMiddlewareAliases(): void
+    {
+        $aliases = config('telegram-bot-router.middleware.aliases', []);
+
+        if (! is_array($aliases)) {
+            return;
+        }
+
+        TelegramBot::aliasMiddlewares($aliases);
     }
 
     protected function loadBotRoutes(): void
