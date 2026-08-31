@@ -2,52 +2,39 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Core;
 
-use ReyhanTeam\TelegramBotRouter\Providers\WebhookProvider;
 use ReyhanTeam\TelegramBotRouter\Providers\PollingProvider;
-
-use function Illuminate\Log\log;
-use Illuminate\Support\Facades\Log;
+use ReyhanTeam\TelegramBotRouter\Providers\WebhookProvider;
 
 class UpdateManager
 {
-    /**
-     * هندل کردن درخواست‌های webhook از سمت تلگرام
-     */
     public function handleWebhook()
     {
-        $mode = config('telegram-bot.mode');
+        $config = config('telegram-bot-router');
 
-        if ($mode !== 'webhook') {
-            // اگر مود webhook نیست، باید 403 بدهیم
-            return response()->json(['error' => 'Webhook is disabled (current mode: '.$mode.')'], 403);
+        if (($config['mode'] ?? 'webhook') !== 'webhook') {
+            return response()->json([
+                'error' => 'Webhook is disabled (current mode: '.($config['mode'] ?? 'unknown').')',
+            ], 403);
         }
 
         $router = app('telegram.router');
-        $config = config('telegram-bot');
-
-        // طبق طراحی فعلی، WebhookProvider خودش php://input را می‌خواند
         $provider = new WebhookProvider($router, $config);
-
-        // در این مدل نیازی به request() نیست
         $provider->start();
 
         return response()->json(['status' => 'ok']);
     }
 
-    /**
-     * شروع polling loop از طریق دستور آرتیسان
-     */
-    public function startPolling()
+    public function startPolling(): void
     {
-        $mode = config('telegram-bot.mode');
+        $config = config('telegram-bot-router');
 
-        if ($mode !== 'polling') {
-            throw new \Exception("Polling mode is disabled. Current mode: {$mode}");
+        if (($config['mode'] ?? null) !== 'polling') {
+            throw new \RuntimeException(
+                'Polling mode is disabled. Current mode: '.($config['mode'] ?? 'unknown')
+            );
         }
 
         $router = app('telegram.router');
-        $config = config('telegram-bot');
-
         $provider = new PollingProvider($router, $config);
         $provider->start();
     }
