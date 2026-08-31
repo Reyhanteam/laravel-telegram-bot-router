@@ -28,4 +28,9 @@ return [
         'cache_store' => env('TELEGRAM_CONVERSATION_CACHE_STORE', null),
     ],
 
+    'exceptions' => [
+        'handler' => ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler::class,
+        'log_level' => env('TELEGRAM_EXCEPTION_LOG_LEVEL', 'error'),
+    ],
+
 ];
