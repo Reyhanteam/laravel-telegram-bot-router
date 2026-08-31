@@ -38,6 +38,12 @@ class ConversationRegistrar
         });
     }
 
+    public function cancelOnCommand(string $command = 'cancel'): static
+    {
+        TelegramBot::cancelConversationOnCommand($command);
+        return $this;
+    }
+
     public function register(): void
     {
         TelegramBot::addConversation($this->name, $this->steps, $this->ttl);
