@@ -3,7 +3,6 @@
 return [
 
     'token' => env('TELEGRAM_BOT_TOKEN', ''),
-
     'mode' => env('TELEGRAM_BOT_MODE', 'webhook'),
 
     'webhook' => [
@@ -15,6 +14,11 @@ return [
         'interval' => (int) env('TELEGRAM_POLLING_INTERVAL', 1500),
         'timeout' => (int) env('TELEGRAM_POLLING_TIMEOUT', 30),
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
+    ],
+
+    'queue' => [
+        'updates' => (bool) env('TELEGRAM_QUEUE_UPDATES', false),
+        'queue' => env('TELEGRAM_QUEUE_NAME', 'default'),
     ],
 
     'middleware' => [
@@ -32,18 +36,9 @@ return [
         'enabled' => (bool) env('TELEGRAM_RATE_LIMIT_ENABLED', false),
         'prefix' => env('TELEGRAM_RATE_LIMIT_PREFIX', 'telegram_bot_router.rate_limit'),
         'limits' => [
-            'user' => [
-                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_USER_MAX', 60),
-                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_USER_DECAY', 60),
-            ],
-            'chat' => [
-                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_MAX', 120),
-                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_DECAY', 60),
-            ],
-            'command' => [
-                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_MAX', 30),
-                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_DECAY', 60),
-            ],
+            'user' => ['max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_USER_MAX', 60), 'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_USER_DECAY', 60)],
+            'chat' => ['max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_MAX', 120), 'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_DECAY', 60)],
+            'command' => ['max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_MAX', 30), 'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_DECAY', 60)],
         ],
     ],
 
