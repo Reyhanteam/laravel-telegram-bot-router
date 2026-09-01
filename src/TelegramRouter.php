@@ -258,7 +258,20 @@ class TelegramRouter
     protected function execute(array $route, TelegramUpdate $update): void
     {
         try {
-            $middleware = array_merge(TelegramBot::getGlobalMiddleware(), $route['middleware'] ?? []);
+            $middleware = TelegramBot::getGlobalMiddleware();
+
+            $configuredLimits = config('telegram-bot-router.rate_limit.limits', []);
+            $routeLimits = $route['rate_limits'] ?? [];
+            $limits = array_replace(is_array($configuredLimits) ? $configuredLimits : [], $routeLimits);
+
+            if ((config('telegram-bot-router.rate_limit.enabled', false) || !empty($routeLimits)) && !empty($limits)) {
+                array_unshift(
+                    $middleware,
+                    new \ReyhanTeam\TelegramBotRouter\Middleware\TelegramRateLimitMiddleware($limits, $route)
+                );
+            }
+
+            $middleware = array_merge($middleware, $route['middleware'] ?? []);
             $destination = fn(TelegramUpdate $update): mixed => $this->resolveAction($route['callback'], $update);
             (new MiddlewarePipeline($middleware))->process($update, $destination);
         } catch (TelegramRouteException $e) {

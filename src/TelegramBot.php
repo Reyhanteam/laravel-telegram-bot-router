@@ -133,6 +133,44 @@ class TelegramBot
         return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware($middleware));
     }
 
+    public static function addRateLimit(int $routeIndex, string $scope, int $maxAttempts, int $decaySeconds): void
+    {
+        if (!isset(static::$routes[$routeIndex])) {
+            throw new \OutOfBoundsException('Telegram route does not exist.');
+        }
+
+        if (!in_array($scope, ['user', 'chat', 'command'], true)) {
+            throw new \InvalidArgumentException('Telegram rate limit scope must be user, chat, or command.');
+        }
+
+        static::$routes[$routeIndex]['rate_limits'][$scope] = [
+            'enabled' => true,
+            'max_attempts' => max(1, $maxAttempts),
+            'decay_seconds' => max(1, $decaySeconds),
+        ];
+    }
+
+    public static function addRateLimits(int $routeIndex, array $limits): void
+    {
+        foreach ($limits as $scope => $limit) {
+            if (is_int($limit)) {
+                static::addRateLimit($routeIndex, (string) $scope, $limit, 60);
+                continue;
+            }
+
+            if (!is_array($limit)) {
+                throw new \InvalidArgumentException('Telegram rate limit configuration must be an integer or array.');
+            }
+
+            static::addRateLimit(
+                $routeIndex,
+                (string) $scope,
+                (int) ($limit['max_attempts'] ?? $limit['max'] ?? 60),
+                (int) ($limit['decay_seconds'] ?? $limit['decay'] ?? 60)
+            );
+        }
+    }
+
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
     {
         return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware());
@@ -147,6 +185,7 @@ class TelegramBot
             'middleware' => $middleware,
             'constraints' => [],
             'parameters' => static::extractRouteParameters($pattern),
+            'rate_limits' => [],
         ];
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }

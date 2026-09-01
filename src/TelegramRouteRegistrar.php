@@ -39,4 +39,23 @@ class TelegramRouteRegistrar
 
         return $this->where($name, '(?:'.implode('|', $escaped).')');
     }
+
+    public function rateLimit(string $scope, int $maxAttempts, int $decaySeconds = 60): self
+    {
+        TelegramBot::addRateLimit(
+            $this->routeIndex,
+            $scope,
+            $maxAttempts,
+            $decaySeconds
+        );
+
+        return $this;
+    }
+
+    public function rateLimits(array $limits): self
+    {
+        TelegramBot::addRateLimits($this->routeIndex, $limits);
+
+        return $this;
+    }
 }

@@ -28,6 +28,25 @@ return [
         'cache_store' => env('TELEGRAM_CONVERSATION_CACHE_STORE', null),
     ],
 
+    'rate_limit' => [
+        'enabled' => (bool) env('TELEGRAM_RATE_LIMIT_ENABLED', false),
+        'prefix' => env('TELEGRAM_RATE_LIMIT_PREFIX', 'telegram_bot_router.rate_limit'),
+        'limits' => [
+            'user' => [
+                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_USER_MAX', 60),
+                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_USER_DECAY', 60),
+            ],
+            'chat' => [
+                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_MAX', 120),
+                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_CHAT_DECAY', 60),
+            ],
+            'command' => [
+                'max_attempts' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_MAX', 30),
+                'decay_seconds' => (int) env('TELEGRAM_RATE_LIMIT_COMMAND_DECAY', 60),
+            ],
+        ],
+    ],
+
     'exceptions' => [
         'handler' => ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler::class,
         'log_level' => env('TELEGRAM_EXCEPTION_LOG_LEVEL', 'error'),

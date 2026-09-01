@@ -1,6 +1,6 @@
 # Laravel Telegram Bot Router
 
-## Version 1.1.15
+## Version 1.3.2
 
 A Laravel package for routing Telegram bot updates with a Laravel-style routing system. Telegram routes live in `routes/bot.php` and are kept separate from Laravel HTTP routes.
 
@@ -1061,13 +1061,63 @@ php artisan reyhan:start-polling
 - [ ] Conversation finished event
 - [ ] Route matched event
 
+## Priority 6 — Rate Limiting
+
+Rate limiting uses Laravel's Cache-backed RateLimiter. It can limit Telegram traffic by user, chat, and command.
+
+Enable the built-in limits in `config/telegram-bot-router.php`:
+
+```php
+'rate_limit' => [
+    'enabled' => true,
+    'limits' => [
+        'user' => ['max_attempts' => 60, 'decay_seconds' => 60],
+        'chat' => ['max_attempts' => 120, 'decay_seconds' => 60],
+        'command' => ['max_attempts' => 30, 'decay_seconds' => 60],
+    ],
+],
+```
+
+Environment variables are also supported:
+
+```env
+TELEGRAM_RATE_LIMIT_ENABLED=true
+TELEGRAM_RATE_LIMIT_USER_MAX=60
+TELEGRAM_RATE_LIMIT_USER_DECAY=60
+TELEGRAM_RATE_LIMIT_CHAT_MAX=120
+TELEGRAM_RATE_LIMIT_CHAT_DECAY=60
+TELEGRAM_RATE_LIMIT_COMMAND_MAX=30
+TELEGRAM_RATE_LIMIT_COMMAND_DECAY=60
+```
+
+Route-specific limits override the global configuration:
+
+```php
+BOT::onCommand('start', [StartController::class, 'index'])
+    ->rateLimit('user', 5, 60)
+    ->rateLimit('command', 2, 60);
+```
+
+Multiple limits can be configured at once:
+
+```php
+BOT::onCommand('profile', [ProfileController::class, 'show'])
+    ->rateLimits([
+        'user' => ['max_attempts' => 10, 'decay_seconds' => 60],
+        'chat' => ['max_attempts' => 30, 'decay_seconds' => 60],
+        'command' => ['max_attempts' => 5, 'decay_seconds' => 60],
+    ]);
+```
+
+When a limit is exceeded, the route handler is not executed. Counters use Laravel's configured cache infrastructure.
+
 ## 🟠 Priority 6 — Rate Limiting
 
-- [ ] Per-user limits
-- [ ] Per-chat limits
-- [ ] Per-command limits
-- [ ] Configurable limits
-- [ ] Laravel Cache integration
+- [x] Per-user limits
+- [x] Per-chat limits
+- [x] Per-command limits
+- [x] Configurable limits
+- [x] Laravel Cache integration
 
 ## 🟠 Priority 7 — Telegram Route List
 
@@ -1148,4 +1198,4 @@ php artisan telegram:route:clear
 
 ## Status
 
-Priority 1, Priority 2, and Priority 3 features are implemented and tested in the current development cycle.
+Priority 1 through Priority 6 features are implemented and tested in the current development cycle.
