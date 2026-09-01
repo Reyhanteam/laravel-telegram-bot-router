@@ -21,6 +21,10 @@ return [
         'queue' => env('TELEGRAM_QUEUE_NAME', 'default'),
     ],
 
+    'route_cache' => [
+        'key' => env('TELEGRAM_ROUTE_CACHE_KEY', 'telegram_bot_router.routes'),
+    ],
+
     'middleware' => [
         'aliases' => [
             // 'admin' => App\Telegram\Middleware\IsAdmin::class,
