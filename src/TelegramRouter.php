@@ -64,8 +64,19 @@ class TelegramRouter
             $this->execute(['callback' => fn(TelegramUpdate $update) => $conversationManager->handle($update), 'pattern' => 'conversation', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update);
             return;
         }
+
+        $routes = TelegramBot::getRoutes();
+        $cachedIndex = TelegramRouteCache::getExactRouteIndexForUpdate($update);
+        if ($cachedIndex !== null && isset($routes[$cachedIndex])) {
+            $matchedRoute = $routes[$cachedIndex];
+            $this->setMatchState($matchedRoute, $update);
+            event(new RouteMatched($update, $matchedRoute));
+            $this->execute($matchedRoute, $update);
+            return;
+        }
+
         $matchedRoute = null; $matchedScore = -1; $matchedMatches = null; $matchedRouteParameters = []; $matchedCommandArguments = [];
-        foreach (TelegramBot::getRoutes() as $route) {
+        foreach ($routes as $route) {
             $update->matches = null; $update->routeParameters = []; $update->commandArguments = [];
             $score = $this->routeMatchScore($route, $update);
             if ($score > $matchedScore) { $matchedRoute = $route; $matchedScore = $score; $matchedMatches = $update->matches; $matchedRouteParameters = $update->routeParameters; $matchedCommandArguments = $update->commandArguments; }
@@ -78,6 +89,19 @@ class TelegramRouter
         }
         if ($onInvalid = TelegramBot::getOnInvalid()) { $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update); return; }
         Log::info('No matching route found', ['update_type' => $this->getUpdateType($update)]);
+    }
+
+    protected function setMatchState(array $route, TelegramUpdate $update): void
+    {
+        $update->matches = null;
+        $update->routeParameters = [];
+        $update->commandArguments = [];
+
+        if (($route['type'] ?? null) === 'command' && isset($update->message->text)) {
+            $parts = preg_split('/\s+/', trim((string) $update->message->text), 2);
+            $argumentText = $parts[1] ?? '';
+            $update->commandArguments = $argumentText === '' ? [] : preg_split('/\s+/', $argumentText);
+        }
     }
 
     protected function isConversationCancelCommand(TelegramUpdate $update): bool
