@@ -57,7 +57,21 @@ class TelegramRouter
     protected function setMatchState(array $route, TelegramUpdate $update): void
     {
         $update->matches = null; $update->routeParameters = []; $update->commandArguments = [];
-        if (($route['type'] ?? null) === 'command' && isset($update->message->text)) { $parts = preg_split('/\s+/', trim((string) $update->message->text), 2); $argumentText = $parts[1] ?? ''; $update->commandArguments = $argumentText === '' ? [] : preg_split('/\s+/', $argumentText); }
+        $type = $route['type'] ?? null;
+        if ($type === 'command' && isset($update->message->text)) {
+            $parts = preg_split('/\s+/', trim((string) $update->message->text), 2);
+            $argumentText = $parts[1] ?? '';
+            $update->commandArguments = $argumentText === '' ? [] : preg_split('/\s+/', $argumentText);
+            return;
+        }
+        if ($type === 'callback_query' && isset($update->callback_query->data)) {
+            $pattern = $route['pattern'] ?? null;
+            $constraints = $route['constraints'] ?? [];
+            if (!empty($route['parameters'])) {
+                $parameters = $this->matchRouteParameters($pattern, (string) $update->callback_query->data, $constraints);
+                if ($parameters !== null) $update->routeParameters = $parameters;
+            }
+        }
     }
 
     protected function isConversationCancelCommand(TelegramUpdate $update): bool
@@ -72,7 +86,19 @@ class TelegramRouter
         $type = $route['type'] ?? null; $pattern = $route['pattern'] ?? null; $constraints = $route['constraints'] ?? []; $parameters = $route['parameters'] ?? [];
         switch ($type) {
             case 'callback_query':
-                if (!isset($update->callback_query)) return -1; if ($pattern === null || $pattern === '') return empty($constraints) ? 10 : -1; return $this->patternScore($pattern, (string) ($update->callback_query->data ?? ''), $update, $constraints);
+                if (!isset($update->callback_query)) return -1;
+                $data = (string) ($update->callback_query->data ?? '');
+                if ($pattern === null || $pattern === '') return empty($constraints) ? 10 : -1;
+                if (!empty($parameters)) {
+                    $match = $this->matchRouteParameters($pattern, $data, $constraints);
+                    if ($match === null) return -1;
+                    $update->routeParameters = $match;
+                    return 110;
+                }
+                // Callback routes use exact data matching only. Regex callback
+                // matching is intentionally not supported.
+                if ($pattern !== $data || !empty($constraints)) return -1;
+                return 100;
             case 'command':
                 if (!isset($update->message->text)) return -1; $text = trim((string) $update->message->text); if ($text === '' || !str_starts_with($text, '/')) return -1; $parts = preg_split('/\s+/', $text, 2); $command = $parts[0] ?? ''; $argumentText = $parts[1] ?? ''; if (str_contains($command, '@')) $command = explode('@', $command, 2)[0]; $normalizedText = $command . ($argumentText === '' ? '' : ' ' . $argumentText); if (!empty($parameters)) { $match = $this->matchRouteParameters($pattern, $normalizedText, $constraints); if ($match === null) return -1; $update->routeParameters = $match; $update->commandArguments = $argumentText === '' ? [] : preg_split('/\s+/', $argumentText); return 75; } if ($command !== $pattern) return -1; $update->commandArguments = $argumentText === '' ? [] : preg_split('/\s+/', $argumentText); return empty($constraints) ? 100 : -1;
             case 'text':
