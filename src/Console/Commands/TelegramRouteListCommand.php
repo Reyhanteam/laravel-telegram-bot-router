@@ -7,7 +7,7 @@ use ReyhanTeam\TelegramBotRouter\TelegramBot;
 
 class TelegramRouteListCommand extends Command
 {
-    protected $signature = 'telegram:route:list';
+    protected $signature = 'reyhan:route-list';
 
     protected $description = 'List registered Telegram bot routes.';
 
