@@ -15,16 +15,38 @@ class TelegramUpdate
 
     public function __construct($update)
     {
-        $this->update = is_array($update) ? (object) $update : $update;
+        $this->update = $this->normalizeUpdate($update);
         $this->validate();
+    }
+
+    protected function normalizeUpdate($update): stdClass
+    {
+        if ($update instanceof stdClass) {
+            return $update;
+        }
+
+        if (is_array($update)) {
+            return $this->arrayToObject($update);
+        }
+
+        throw new InvalidTelegramUpdateException('Telegram update must be an object.');
+    }
+
+    protected function arrayToObject(array $data): stdClass
+    {
+        $object = new stdClass();
+
+        foreach ($data as $key => $value) {
+            $object->{$key} = is_array($value)
+                ? $this->arrayToObject($value)
+                : $value;
+        }
+
+        return $object;
     }
 
     protected function validate(): void
     {
-        if (!$this->update instanceof stdClass) {
-            throw new InvalidTelegramUpdateException('Telegram update must be an object.');
-        }
-
         if (!isset($this->update->update_id)) {
             throw new InvalidTelegramUpdateException('Telegram update_id is missing.');
         }
@@ -63,11 +85,54 @@ class TelegramUpdate
         throw new InvalidTelegramUpdateException('Telegram update does not contain a supported update type.');
     }
 
-    public function __get($key) { return $this->recursiveGet($this->update, $key); }
-    protected function recursiveGet($object, string $key) { if (is_object($object) && property_exists($object, $key)) { $value = $object->{$key}; return (is_object($value) || is_array($value)) ? new static($value) : $value; } if (is_object($object)) { foreach ($object as $prop => $value) if (Str::snake($prop) === $key) return (is_object($value) || is_array($value)) ? new static($value) : $value; } return null; }
-    public function __isset($key): bool { return $this->recursiveIsset($this->update, $key); }
-    protected function recursiveIsset($object, string $key): bool { if (is_object($object) && property_exists($object, $key)) return true; if (is_object($object)) foreach ($object as $prop => $value) if (Str::snake($prop) === $key) return true; return false; }
-    public function originalUpdate(): stdClass { return $this->update; }
+    public function __get($key)
+    {
+        return $this->recursiveGet($this->update, $key);
+    }
+
+    protected function recursiveGet($object, string $key)
+    {
+        if (is_object($object) && property_exists($object, $key)) {
+            return $object->{$key};
+        }
+
+        if (is_object($object)) {
+            foreach ($object as $prop => $value) {
+                if (Str::snake($prop) === $key) {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function __isset($key): bool
+    {
+        return $this->recursiveIsset($this->update, $key);
+    }
+
+    protected function recursiveIsset($object, string $key): bool
+    {
+        if (is_object($object) && property_exists($object, $key)) {
+            return true;
+        }
+
+        if (is_object($object)) {
+            foreach ($object as $prop => $value) {
+                if (Str::snake($prop) === $key) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public function originalUpdate(): stdClass
+    {
+        return $this->update;
+    }
 
     public function chatId()
     {
@@ -115,9 +180,28 @@ class TelegramUpdate
             ?? null;
     }
 
-    public function callbackQueryData(): ?string { return $this->callback_query->data ?? null; }
-    public function commandArguments(): array { return $this->commandArguments; }
-    public function routeParameters(): array { return $this->routeParameters; }
-    public function routeParameter(string $name, mixed $default = null): mixed { return $this->routeParameters[$name] ?? $default; }
-    public static function fromArray($data) { return new self($data); }
+    public function callbackQueryData(): ?string
+    {
+        return $this->callback_query->data ?? null;
+    }
+
+    public function commandArguments(): array
+    {
+        return $this->commandArguments;
+    }
+
+    public function routeParameters(): array
+    {
+        return $this->routeParameters;
+    }
+
+    public function routeParameter(string $name, mixed $default = null): mixed
+    {
+        return $this->routeParameters[$name] ?? $default;
+    }
+
+    public static function fromArray($data)
+    {
+        return new self($data);
+    }
 }
