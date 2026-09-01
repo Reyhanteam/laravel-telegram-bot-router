@@ -50,6 +50,14 @@ class TelegramRouter
         $matchedRoute = null; $matchedScore = -1; $matchedMatches = null; $matchedRouteParameters = []; $matchedCommandArguments = [];
         foreach ($routes as $route) { $update->matches = null; $update->routeParameters = []; $update->commandArguments = []; $score = $this->routeMatchScore($route, $update); if ($score > $matchedScore) { $matchedRoute = $route; $matchedScore = $score; $matchedMatches = $update->matches; $matchedRouteParameters = $update->routeParameters; $matchedCommandArguments = $update->commandArguments; } }
         if ($matchedRoute !== null) { $update->matches = $matchedMatches; $update->routeParameters = $matchedRouteParameters; $update->commandArguments = $matchedCommandArguments; event(new RouteMatched($update, $matchedRoute)); $this->execute($matchedRoute, $update); return; }
+
+        // Fallback is the handler for valid Telegram updates that do not match any route.
+        // onInvalid is reserved for invalid/unusable updates and must not replace fallback.
+        if ($fallback = TelegramBot::getFallback()) {
+            $this->execute(['callback' => $fallback, 'pattern' => 'fallback', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update);
+            return;
+        }
+
         if ($onInvalid = TelegramBot::getOnInvalid()) { $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update); return; }
         Log::info('No matching route found', ['update_type' => $this->getUpdateType($update)]);
     }
@@ -95,8 +103,6 @@ class TelegramRouter
                     $update->routeParameters = $match;
                     return 110;
                 }
-                // Callback routes use exact data matching only. Regex callback
-                // matching is intentionally not supported.
                 if ($pattern !== $data || !empty($constraints)) return -1;
                 return 100;
             case 'command':
