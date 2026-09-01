@@ -3,6 +3,7 @@
 namespace ReyhanTeam\TelegramBotRouter;
 
 use Illuminate\Support\Str;
+use ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException;
 use stdClass;
 
 class TelegramUpdate
@@ -12,7 +13,56 @@ class TelegramUpdate
     public array $commandArguments = [];
     public array $routeParameters = [];
 
-    public function __construct($update) { $this->update = is_array($update) ? (object) $update : $update; }
+    public function __construct($update)
+    {
+        $this->update = is_array($update) ? (object) $update : $update;
+        $this->validate();
+    }
+
+    protected function validate(): void
+    {
+        if (!$this->update instanceof stdClass) {
+            throw new InvalidTelegramUpdateException('Telegram update must be an object.');
+        }
+
+        if (!isset($this->update->update_id)) {
+            throw new InvalidTelegramUpdateException('Telegram update_id is missing.');
+        }
+
+        $updateTypes = [
+            'message',
+            'edited_message',
+            'channel_post',
+            'edited_channel_post',
+            'inline_query',
+            'callback_query',
+            'shipping_query',
+            'pre_checkout_query',
+            'poll',
+            'poll_answer',
+            'my_chat_member',
+            'chat_member',
+            'chat_join_request',
+            'chat_boost',
+            'removed_chat_boost',
+            'business_connection',
+            'business_message',
+            'edited_business_message',
+            'deleted_business_messages',
+            'message_reaction',
+            'message_reaction_count',
+            'purchased_paid_media',
+        ];
+
+        foreach ($updateTypes as $type) {
+            if (isset($this->update->{$type})) {
+                return;
+            }
+        }
+
+        throw new InvalidTelegramUpdateException('Telegram update does not contain a supported update type.');
+    }
+
     public function __get($key) { return $this->recursiveGet($this->update, $key); }
     protected function recursiveGet($object, string $key) { if (is_object($object) && property_exists($object, $key)) { $value = $object->{$key}; return (is_object($value) || is_array($value)) ? new static($value) : $value; } if (is_object($object)) { foreach ($object as $prop => $value) if (Str::snake($prop) === $key) return (is_object($value) || is_array($value)) ? new static($value) : $value; } return null; }
     public function __isset($key): bool { return $this->recursiveIsset($this->update, $key); }
