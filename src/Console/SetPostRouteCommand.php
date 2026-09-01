@@ -8,7 +8,7 @@ use ReyhanTeam\TelegramBotRouter\Core\UpdateManager;
 
 class SetPostRouteCommand extends Command
 {
-    protected $signature = 'reyhan:setWebhookRoute';
+    protected $signature = 'reyhan:set-webhook-route';
 
     protected $description = 'Register Telegram webhook route from configuration';
 
