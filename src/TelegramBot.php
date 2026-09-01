@@ -26,7 +26,77 @@ class TelegramBot
     }
 
     public static function onText(string $pattern, $callback): TelegramRouteRegistrar { return static::addRoute('text', $pattern, $callback); }
-    public static function onCallbackQuery($callback): TelegramRouteRegistrar { return static::addRoute('callback_query', null, $callback); }
+
+    /**
+     * Register a callback query route.
+     *
+     * A pattern may be an exact callback value such as "buy" or a route
+     * pattern such as "product:{id}". Regex callback matching is intentionally
+     * not supported by this API.
+     */
+    public static function onCallbackQuery($pattern, $callback = null): TelegramRouteRegistrar
+    {
+        if ($callback === null) {
+            $callback = $pattern;
+            $pattern = null;
+        }
+
+        if (!is_callable($callback) && !(is_array($callback) && count($callback) === 2)) {
+            throw new \InvalidArgumentException('Invalid Telegram callback query route action provided.');
+        }
+
+        return static::addRoute('callback_query', is_string($pattern) ? trim($pattern) : null, $callback);
+    }
+
+    /**
+     * Short alias for onCallbackQuery().
+     */
+    public static function onCallback(string $pattern, $callback): TelegramRouteRegistrar
+    {
+        return static::onCallbackQuery($pattern, $callback);
+    }
+
+    /**
+     * Generate callback data from a named Telegram callback route.
+     *
+     * Example: TelegramBot::callbackRoute('product.show', ['id' => 125])
+     * returns "product:125" for a route named product.show with pattern
+     * "product:{id}".
+     */
+    public static function callbackRoute(string $name, array $parameters = []): string
+    {
+        $route = static::getRouteByName($name);
+
+        if ($route === null || ($route['type'] ?? null) !== 'callback_query') {
+            throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] was not found.', $name));
+        }
+
+        $pattern = $route['pattern'] ?? null;
+
+        if (!is_string($pattern) || $pattern === '') {
+            if ($parameters !== []) {
+                throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] does not accept parameters.', $name));
+            }
+
+            return '';
+        }
+
+        $required = $route['parameters'] ?? static::extractRouteParameters($pattern);
+        foreach ($required as $parameter) {
+            if (!array_key_exists($parameter, $parameters)) {
+                throw new \InvalidArgumentException(sprintf('Missing parameter [%s] for Telegram callback route [%s].', $parameter, $name));
+            }
+        }
+
+        return preg_replace_callback(
+            '/\{([A-Za-z_][A-Za-z0-9_]*)\}/',
+            static function (array $match) use ($parameters, $name): string {
+                return (string) $parameters[$match[1]];
+            },
+            $pattern
+        );
+    }
+
     public static function onInlineQuery($pattern, $callback = null): TelegramRouteRegistrar { return static::addFlexibleUpdateRoute('inline_query', $pattern, $callback); }
     public static function onEditedMessage($pattern, $callback = null): TelegramRouteRegistrar { return static::addFlexibleUpdateRoute('edited_message', $pattern, $callback); }
     public static function onChannelPost($pattern, $callback = null): TelegramRouteRegistrar { return static::addFlexibleUpdateRoute('channel_post', $pattern, $callback); }
