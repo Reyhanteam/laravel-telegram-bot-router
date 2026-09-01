@@ -264,7 +264,7 @@ class TelegramRouter
             $routeLimits = $route['rate_limits'] ?? [];
             $limits = array_replace(is_array($configuredLimits) ? $configuredLimits : [], $routeLimits);
 
-            if (config('telegram-bot-router.rate_limit.enabled', false) && !empty($limits)) {
+            if ((config('telegram-bot-router.rate_limit.enabled', false) || !empty($routeLimits)) && !empty($limits)) {
                 array_unshift(
                     $middleware,
                     new \ReyhanTeam\TelegramBotRouter\Middleware\TelegramRateLimitMiddleware($limits, $route)
