@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use ReyhanTeam\TelegramBotRouter\Console\SetPostRouteCommand;
 use ReyhanTeam\TelegramBotRouter\Console\StartPollingCommand;
+use ReyhanTeam\TelegramBotRouter\Console\TelegramRouteListCommand;
 use ReyhanTeam\TelegramBotRouter\Core\UpdateManager;
 
 class TelegramRouterServiceProvider extends ServiceProvider
@@ -26,6 +27,7 @@ class TelegramRouterServiceProvider extends ServiceProvider
         $this->commands([
             StartPollingCommand::class,
             SetPostRouteCommand::class,
+            TelegramRouteListCommand::class,
         ]);
     }
 
