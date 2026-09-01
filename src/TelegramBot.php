@@ -106,6 +106,31 @@ class TelegramBot
         static::$routes[$routeIndex]['queue'] = ['enabled' => true, 'queue' => $queue];
     }
 
+    public static function nameRoute(int $routeIndex, string $name): void
+    {
+        if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.');
+
+        $name = trim($name);
+        if ($name === '') throw new \InvalidArgumentException('Telegram route name cannot be empty.');
+
+        foreach (static::$routes as $index => $route) {
+            if ($index !== $routeIndex && ($route['name'] ?? null) === $name) {
+                throw new \InvalidArgumentException(sprintf('Telegram route name [%s] is already in use.', $name));
+            }
+        }
+
+        static::$routes[$routeIndex]['name'] = $name;
+    }
+
+    public static function getRouteByName(string $name): ?array
+    {
+        foreach (static::$routes as $route) {
+            if (($route['name'] ?? null) === $name) return $route;
+        }
+
+        return null;
+    }
+
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
     {
         return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware());
@@ -113,7 +138,7 @@ class TelegramBot
 
     protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
     {
-        static::$routes[] = ['type' => $type, 'pattern' => $pattern, 'callback' => $callback, 'middleware' => $middleware, 'constraints' => [], 'parameters' => static::extractRouteParameters($pattern), 'rate_limits' => [], 'queue' => ['enabled' => false, 'queue' => null]];
+        static::$routes[] = ['type' => $type, 'pattern' => $pattern, 'callback' => $callback, 'name' => null, 'middleware' => $middleware, 'constraints' => [], 'parameters' => static::extractRouteParameters($pattern), 'rate_limits' => [], 'queue' => ['enabled' => false, 'queue' => null]];
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }
 
