@@ -42,6 +42,10 @@ return [
         ],
     ],
 
+    'authorization' => [
+        'admin_user_ids' => array_values(array_filter(array_map('trim', explode(',', env('TELEGRAM_ADMIN_USER_IDS', ''))))),
+    ],
+
     'conversation' => [
         'ttl' => (int) env('TELEGRAM_CONVERSATION_TTL', 3600),
         'cache_store' => env('TELEGRAM_CONVERSATION_CACHE_STORE', null),
