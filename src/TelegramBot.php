@@ -40,135 +40,70 @@ class TelegramBot
         return new TelegramMiddlewareRegistrar($middleware);
     }
 
-    public static function globalMiddleware(array $middleware): void
-    {
-        static::$globalMiddleware = $middleware;
-    }
+    public static function globalMiddleware(array $middleware): void { static::$globalMiddleware = $middleware; }
 
-    public static function aliasMiddleware(string $name, string $middleware): void
-    {
-        static::$middlewareAliases[$name] = $middleware;
-    }
+    public static function aliasMiddleware(string $name, string $middleware): void { static::$middlewareAliases[$name] = $middleware; }
 
     public static function aliasMiddlewares(array $aliases): void
     {
-        foreach ($aliases as $name => $middleware) {
-            static::aliasMiddleware((string) $name, $middleware);
-        }
+        foreach ($aliases as $name => $middleware) static::aliasMiddleware((string) $name, $middleware);
     }
 
-    public static function getMiddlewareAliases(): array
-    {
-        return static::$middlewareAliases;
-    }
-
-    public static function resolveMiddlewareAlias(string $name): ?string
-    {
-        return static::$middlewareAliases[$name] ?? null;
-    }
+    public static function getMiddlewareAliases(): array { return static::$middlewareAliases; }
+    public static function resolveMiddlewareAlias(string $name): ?string { return static::$middlewareAliases[$name] ?? null; }
 
     public static function group(array $middleware, Closure $routes): void
     {
         static::$middlewareGroupStack[] = $middleware;
-        try {
-            $routes();
-        } finally {
-            array_pop(static::$middlewareGroupStack);
-        }
+        try { $routes(); } finally { array_pop(static::$middlewareGroupStack); }
     }
 
-    public static function conversation(string $name): ConversationRegistrar
-    {
-        return new ConversationRegistrar($name);
-    }
+    public static function conversation(string $name): ConversationRegistrar { return new ConversationRegistrar($name); }
 
     public static function addConversation(string $name, array $steps, int $ttl = 3600, array $middleware = [], ?string $cacheStore = null): void
     {
-        static::$conversations[$name] = [
-            'steps' => array_values($steps),
-            'ttl' => $ttl,
-            'middleware' => $middleware,
-            'cache_store' => $cacheStore,
-        ];
+        static::$conversations[$name] = ['steps' => array_values($steps), 'ttl' => $ttl, 'middleware' => $middleware, 'cache_store' => $cacheStore];
     }
 
-    public static function getConversations(): array
-    {
-        return static::$conversations;
-    }
-
-    public static function cancelConversation(TelegramUpdate $update): bool
-    {
-        return app(\ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager::class)->cancel($update);
-    }
+    public static function getConversations(): array { return static::$conversations; }
+    public static function cancelConversation(TelegramUpdate $update): bool { return app(\ReyhanTeam\TelegramBotRouter\Conversation\ConversationManager::class)->cancel($update); }
 
     public static function cancelConversationOnCommand(string $command): void
     {
         $command = '/'.ltrim($command, '/');
-        if (!in_array($command, static::$conversationCancelCommands, true)) {
-            static::$conversationCancelCommands[] = $command;
-        }
+        if (!in_array($command, static::$conversationCancelCommands, true)) static::$conversationCancelCommands[] = $command;
     }
 
-    public static function getConversationCancelCommands(): array
-    {
-        return static::$conversationCancelCommands;
-    }
-
-    public static function getGlobalMiddleware(): array
-    {
-        return static::$globalMiddleware;
-    }
-
-    public static function fallback($callback): void
-    {
-        static::$fallback = $callback;
-    }
+    public static function getConversationCancelCommands(): array { return static::$conversationCancelCommands; }
+    public static function getGlobalMiddleware(): array { return static::$globalMiddleware; }
+    public static function fallback($callback): void { static::$fallback = $callback; }
 
     public static function addMiddlewareRoute(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
     {
-        if ($type === 'command' && $pattern !== null) {
-            $pattern = '/'.ltrim($pattern, '/');
-        }
+        if ($type === 'command' && $pattern !== null) $pattern = '/'.ltrim($pattern, '/');
         return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware($middleware));
     }
 
     public static function addRateLimit(int $routeIndex, string $scope, int $maxAttempts, int $decaySeconds): void
     {
-        if (!isset(static::$routes[$routeIndex])) {
-            throw new \OutOfBoundsException('Telegram route does not exist.');
-        }
-
-        if (!in_array($scope, ['user', 'chat', 'command'], true)) {
-            throw new \InvalidArgumentException('Telegram rate limit scope must be user, chat, or command.');
-        }
-
-        static::$routes[$routeIndex]['rate_limits'][$scope] = [
-            'enabled' => true,
-            'max_attempts' => max(1, $maxAttempts),
-            'decay_seconds' => max(1, $decaySeconds),
-        ];
+        if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.');
+        if (!in_array($scope, ['user', 'chat', 'command'], true)) throw new \InvalidArgumentException('Telegram rate limit scope must be user, chat, or command.');
+        static::$routes[$routeIndex]['rate_limits'][$scope] = ['enabled' => true, 'max_attempts' => max(1, $maxAttempts), 'decay_seconds' => max(1, $decaySeconds)];
     }
 
     public static function addRateLimits(int $routeIndex, array $limits): void
     {
         foreach ($limits as $scope => $limit) {
-            if (is_int($limit)) {
-                static::addRateLimit($routeIndex, (string) $scope, $limit, 60);
-                continue;
-            }
-
-            if (!is_array($limit)) {
-                throw new \InvalidArgumentException('Telegram rate limit configuration must be an integer or array.');
-            }
-
-            static::addRateLimit(
-                $routeIndex,
-                (string) $scope,
-                (int) ($limit['max_attempts'] ?? $limit['max'] ?? 60),
-                (int) ($limit['decay_seconds'] ?? $limit['decay'] ?? 60)
-            );
+            if (is_int($limit)) { static::addRateLimit($routeIndex, (string) $scope, $limit, 60); continue; }
+            if (!is_array($limit)) throw new \InvalidArgumentException('Telegram rate limit configuration must be an integer or array.');
+            static::addRateLimit($routeIndex, (string) $scope, (int) ($limit['max_attempts'] ?? $limit['max'] ?? 60), (int) ($limit['decay_seconds'] ?? $limit['decay'] ?? 60));
         }
+    }
+
+    public static function enableQueue(int $routeIndex, ?string $queue = null): void
+    {
+        if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.');
+        static::$routes[$routeIndex]['queue'] = ['enabled' => true, 'queue' => $queue];
     }
 
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar
@@ -178,15 +113,7 @@ class TelegramBot
 
     protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar
     {
-        static::$routes[] = [
-            'type' => $type,
-            'pattern' => $pattern,
-            'callback' => $callback,
-            'middleware' => $middleware,
-            'constraints' => [],
-            'parameters' => static::extractRouteParameters($pattern),
-            'rate_limits' => [],
-        ];
+        static::$routes[] = ['type' => $type, 'pattern' => $pattern, 'callback' => $callback, 'middleware' => $middleware, 'constraints' => [], 'parameters' => static::extractRouteParameters($pattern), 'rate_limits' => [], 'queue' => ['enabled' => false, 'queue' => null]];
         return new TelegramRouteRegistrar(count(static::$routes) - 1);
     }
 
@@ -200,18 +127,9 @@ class TelegramBot
     protected static function isRegexPattern(string $pattern): bool
     {
         if (strlen($pattern) < 3) return false;
-        $delimiter = $pattern[0];
-        if (ctype_alnum($delimiter) || $delimiter === '\\') return false;
+        $delimiter = $pattern[0]; if (ctype_alnum($delimiter) || $delimiter === '\\') return false;
         $length = strlen($pattern); $escaped = false;
-        for ($i = 1; $i < $length; $i++) {
-            $char = $pattern[$i];
-            if ($escaped) { $escaped = false; continue; }
-            if ($char === '\\') { $escaped = true; continue; }
-            if ($char === $delimiter) {
-                $modifiers = substr($pattern, $i + 1);
-                return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1;
-            }
-        }
+        for ($i = 1; $i < $length; $i++) { $char = $pattern[$i]; if ($escaped) { $escaped = false; continue; } if ($char === '\\') { $escaped = true; continue; } if ($char === $delimiter) { $modifiers = substr($pattern, $i + 1); return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1; } }
         return false;
     }
 
