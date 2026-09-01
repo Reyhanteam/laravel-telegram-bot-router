@@ -27,74 +27,27 @@ class TelegramBot
 
     public static function onText(string $pattern, $callback): TelegramRouteRegistrar { return static::addRoute('text', $pattern, $callback); }
 
-    /**
-     * Register a callback query route.
-     *
-     * A pattern may be an exact callback value such as "buy" or a route
-     * pattern such as "product:{id}". Regex callback matching is intentionally
-     * not supported by this API.
-     */
     public static function onCallbackQuery($pattern, $callback = null): TelegramRouteRegistrar
     {
-        if ($callback === null) {
-            $callback = $pattern;
-            $pattern = null;
-        }
-
-        if (!is_callable($callback) && !(is_array($callback) && count($callback) === 2)) {
-            throw new \InvalidArgumentException('Invalid Telegram callback query route action provided.');
-        }
-
+        if ($callback === null) { $callback = $pattern; $pattern = null; }
+        if (!is_callable($callback) && !(is_array($callback) && count($callback) === 2)) throw new \InvalidArgumentException('Invalid Telegram callback query route action provided.');
         return static::addRoute('callback_query', is_string($pattern) ? trim($pattern) : null, $callback);
     }
 
-    /**
-     * Short alias for onCallbackQuery().
-     */
-    public static function onCallback(string $pattern, $callback): TelegramRouteRegistrar
-    {
-        return static::onCallbackQuery($pattern, $callback);
-    }
+    public static function onCallback(string $pattern, $callback): TelegramRouteRegistrar { return static::onCallbackQuery($pattern, $callback); }
 
-    /**
-     * Generate callback data from a named Telegram callback route.
-     *
-     * Example: TelegramBot::callbackRoute('product.show', ['id' => 125])
-     * returns "product:125" for a route named product.show with pattern
-     * "product:{id}".
-     */
     public static function callbackRoute(string $name, array $parameters = []): string
     {
         $route = static::getRouteByName($name);
-
-        if ($route === null || ($route['type'] ?? null) !== 'callback_query') {
-            throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] was not found.', $name));
-        }
-
+        if ($route === null || ($route['type'] ?? null) !== 'callback_query') throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] was not found.', $name));
         $pattern = $route['pattern'] ?? null;
-
         if (!is_string($pattern) || $pattern === '') {
-            if ($parameters !== []) {
-                throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] does not accept parameters.', $name));
-            }
-
+            if ($parameters !== []) throw new \InvalidArgumentException(sprintf('Telegram callback route [%s] does not accept parameters.', $name));
             return '';
         }
-
         $required = $route['parameters'] ?? static::extractRouteParameters($pattern);
-        foreach ($required as $parameter) {
-            if (!array_key_exists($parameter, $parameters)) {
-                throw new \InvalidArgumentException(sprintf('Missing parameter [%s] for Telegram callback route [%s].', $parameter, $name));
-            }
-        }
-
-        return preg_replace_callback(
-            '/\{([A-Za-z_][A-Za-z0-9_]*)\}/',
-            static function (array $match) use ($parameters, $name): string {
-                return (string) $parameters[$match[1]];
-            },
-            $pattern
-        );
+        foreach ($required as $parameter) if (!array_key_exists($parameter, $parameters)) throw new \InvalidArgumentException(sprintf('Missing parameter [%s] for Telegram callback route [%s].', $parameter, $name));
+        return preg_replace_callback('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', static fn (array $match): string => (string) $parameters[$match[1]], $pattern);
     }
 
     public static function onInlineQuery($pattern, $callback = null): TelegramRouteRegistrar { return static::addFlexibleUpdateRoute('inline_query', $pattern, $callback); }
@@ -108,9 +61,7 @@ class TelegramBot
     protected static function addFlexibleUpdateRoute(string $type, $pattern, $callback = null): TelegramRouteRegistrar
     {
         if ($callback === null) { $callback = $pattern; $pattern = null; }
-        if (!is_callable($callback) && !(is_array($callback) && count($callback) === 2)) {
-            throw new \InvalidArgumentException("Invalid Telegram {$type} route action provided.");
-        }
+        if (!is_callable($callback) && !(is_array($callback) && count($callback) === 2)) throw new \InvalidArgumentException("Invalid Telegram {$type} route action provided.");
         return static::addRoute($type, is_string($pattern) ? $pattern : null, $callback);
     }
 
@@ -135,11 +86,48 @@ class TelegramBot
         if ($type === 'command' && $pattern !== null) $pattern = '/'.ltrim($pattern, '/');
         return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware($middleware));
     }
+
+    public static function addRouteMiddleware(int $routeIndex, string $middleware): void
+    {
+        static::assertRoute($routeIndex);
+        static::$routes[$routeIndex]['middleware'][] = $middleware;
+    }
+
     public static function addRateLimit(int $routeIndex, string $scope, int $maxAttempts, int $decaySeconds): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); if (!in_array($scope, ['user', 'chat', 'command'], true)) throw new \InvalidArgumentException('Telegram rate limit scope must be user, chat, or command.'); static::$routes[$routeIndex]['rate_limits'][$scope] = ['enabled' => true, 'max_attempts' => max(1, $maxAttempts), 'decay_seconds' => max(1, $decaySeconds)]; }
     public static function addRateLimits(int $routeIndex, array $limits): void { foreach ($limits as $scope => $limit) { if (is_int($limit)) { static::addRateLimit($routeIndex, (string) $scope, $limit, 60); continue; } if (!is_array($limit)) throw new \InvalidArgumentException('Telegram rate limit configuration must be an integer or array.'); static::addRateLimit($routeIndex, (string) $scope, (int) ($limit['max_attempts'] ?? $limit['max'] ?? 60), (int) ($limit['decay_seconds'] ?? $limit['decay'] ?? 60)); } }
     public static function enableQueue(int $routeIndex, ?string $queue = null): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); static::$routes[$routeIndex]['queue'] = ['enabled' => true, 'queue' => $queue]; }
     public static function nameRoute(int $routeIndex, string $name): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); $name = trim($name); if ($name === '') throw new \InvalidArgumentException('Telegram route name cannot be empty.'); foreach (static::$routes as $index => $route) if ($index !== $routeIndex && ($route['name'] ?? null) === $name) throw new \InvalidArgumentException(sprintf('Telegram route name [%s] is already in use.', $name)); static::$routes[$routeIndex]['name'] = $name; }
     public static function getRouteByName(string $name): ?array { foreach (static::$routes as $route) if (($route['name'] ?? null) === $name) return $route; return null; }
+
+    public static function addUserCondition(int $routeIndex, int|string|array $userIds): void
+    {
+        $ids = is_array($userIds) ? $userIds : [$userIds];
+        if ($ids === []) throw new \InvalidArgumentException('Telegram user condition cannot be empty.');
+        static::addRouteMiddleware($routeIndex, __NAMESPACE__.'\\Middleware\\TelegramUserConditionMiddleware:'.implode(',', array_map('strval', $ids)));
+    }
+
+    public static function enableAdminOnly(int $routeIndex): void
+    {
+        static::addRouteMiddleware($routeIndex, __NAMESPACE__.'\\Middleware\\TelegramAdminOnlyMiddleware');
+    }
+
+    public static function addChatTypeCondition(int $routeIndex, string|array $types): void
+    {
+        $types = is_array($types) ? $types : [$types];
+        $allowed = ['private', 'group', 'supergroup', 'channel'];
+        foreach ($types as $type) if (!in_array($type, $allowed, true)) throw new \InvalidArgumentException('Telegram chat type must be private, group, supergroup, or channel.');
+        static::addRouteMiddleware($routeIndex, __NAMESPACE__.'\\Middleware\\TelegramChatTypeMiddleware:'.implode(',', $types));
+    }
+
+    public static function addPermissionCondition(int $routeIndex, string|array $permissions): void
+    {
+        $permissions = is_array($permissions) ? $permissions : [$permissions];
+        $permissions = array_values(array_filter(array_map('trim', $permissions), static fn ($value) => $value !== ''));
+        if ($permissions === []) throw new \InvalidArgumentException('Telegram permission cannot be empty.');
+        static::addRouteMiddleware($routeIndex, __NAMESPACE__.'\\Middleware\\TelegramPermissionMiddleware:'.implode(',', $permissions));
+    }
+
+    protected static function assertRoute(int $routeIndex): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); }
     protected static function addRoute(string $type, ?string $pattern, $callback): TelegramRouteRegistrar { return static::addRouteWithMiddleware($type, $pattern, $callback, static::getGroupMiddleware()); }
     protected static function addRouteWithMiddleware(string $type, ?string $pattern, $callback, array $middleware): TelegramRouteRegistrar { static::$routes[] = ['type' => $type, 'pattern' => $pattern, 'callback' => $callback, 'name' => null, 'middleware' => $middleware, 'constraints' => [], 'parameters' => static::extractRouteParameters($pattern), 'rate_limits' => [], 'queue' => ['enabled' => false, 'queue' => null]]; return new TelegramRouteRegistrar(count(static::$routes) - 1); }
     protected static function extractRouteParameters(?string $pattern): array { if ($pattern === null || static::isRegexPattern($pattern)) return []; preg_match_all('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', $pattern, $matches); return $matches[1] ?? []; }
