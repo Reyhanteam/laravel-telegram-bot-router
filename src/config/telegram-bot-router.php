@@ -14,6 +14,17 @@ return [
         'interval' => (int) env('TELEGRAM_POLLING_INTERVAL', 1500),
         'timeout' => (int) env('TELEGRAM_POLLING_TIMEOUT', 30),
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
+        'allowed_updates' => [
+            'message',
+            'edited_message',
+            'channel_post',
+            'edited_channel_post',
+            'inline_query',
+            'callback_query',
+            'chat_member',
+            'my_chat_member',
+            'chat_join_request',
+        ],
     ],
 
     'queue' => [
