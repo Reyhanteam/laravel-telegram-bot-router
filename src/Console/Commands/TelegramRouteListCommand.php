@@ -24,6 +24,7 @@ class TelegramRouteListCommand extends Command
                 $index + 1,
                 strtoupper((string) ($route['type'] ?? 'unknown')),
                 $this->pattern($route),
+                $this->name($route),
                 $this->action($route['callback'] ?? null),
                 $this->middleware($route),
                 $this->rateLimits($route),
@@ -33,7 +34,7 @@ class TelegramRouteListCommand extends Command
 
         $this->newLine();
         $this->components->info('Telegram Bot Routes');
-        $this->table(['#', 'TYPE', 'ROUTE', 'ACTION', 'MIDDLEWARE', 'RATE LIMIT', 'QUEUE'], $rows);
+        $this->table(['#', 'TYPE', 'ROUTE', 'NAME', 'ACTION', 'MIDDLEWARE', 'RATE LIMIT', 'QUEUE'], $rows);
         $this->newLine();
         $this->components->twoColumnDetail('Total routes', (string) count($routes));
         return self::SUCCESS;
@@ -43,6 +44,12 @@ class TelegramRouteListCommand extends Command
     {
         $pattern = $route['pattern'] ?? null;
         return $pattern === null || $pattern === '' ? '*' : (string) $pattern;
+    }
+
+    protected function name(array $route): string
+    {
+        $name = $route['name'] ?? null;
+        return $name === null || $name === '' ? '-' : (string) $name;
     }
 
     protected function action($callback): string
