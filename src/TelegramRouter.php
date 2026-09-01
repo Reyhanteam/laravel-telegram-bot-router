@@ -15,7 +15,6 @@ use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRouteException;
 use ReyhanTeam\TelegramBotRouter\Middleware\MiddlewarePipeline;
 use Throwable;
 
-
 class TelegramRouter
 {
     protected ?Request $request;
@@ -49,9 +48,7 @@ class TelegramRouter
                 event(new CommandReceived($this->update));
             }
         }
-        if (isset($this->update->callback_query)) {
-            event(new CallbackQueryReceived($this->update));
-        }
+        if (isset($this->update->callback_query)) event(new CallbackQueryReceived($this->update));
         try {
             $this->dispatch($this->update);
         } catch (Throwable $e) {
@@ -102,9 +99,7 @@ class TelegramRouter
             $update->matches = $matchedMatches;
             $update->routeParameters = $matchedRouteParameters;
             $update->commandArguments = $matchedCommandArguments;
-
             event(new RouteMatched($update, $matchedRoute));
-
             $this->execute($matchedRoute, $update);
             return;
         }
@@ -130,6 +125,7 @@ class TelegramRouter
     {
         return $this->routeMatchScore($route, $update) >= 0;
     }
+
     protected function routeMatchScore(array $route, TelegramUpdate $update): int
     {
         $type = $route['type'] ?? null;
@@ -200,6 +196,7 @@ class TelegramRouter
         foreach ($names as $name) $parameters[$name] = $routeMatches[$name];
         return $parameters;
     }
+
     protected function patternScore(?string $pattern, string $text, TelegramUpdate $update, array $constraints = []): int
     {
         if ($pattern === null) return -1;
@@ -218,6 +215,7 @@ class TelegramRouter
         if ($result === false) Log::warning('Invalid Telegram route regex', ['pattern' => $pattern, 'error' => preg_last_error_msg()]);
         return -1;
     }
+
     protected function constraintsMatch(array $constraints, array $matches): bool
     {
         foreach ($constraints as $name => $expression) {
@@ -226,10 +224,12 @@ class TelegramRouter
         }
         return true;
     }
+
     protected function matchPattern(string $pattern, string $text, TelegramUpdate $update): bool
     {
         return $this->patternScore($pattern, $text, $update) >= 0;
     }
+
     protected function isRegex(string $pattern): bool
     {
         if (strlen($pattern) < 3) return false;
@@ -239,14 +239,8 @@ class TelegramRouter
         $escaped = false;
         for ($i = 1; $i < $length; $i++) {
             $char = $pattern[$i];
-            if ($escaped) {
-                $escaped = false;
-                continue;
-            }
-            if ($char === '\\') {
-                $escaped = true;
-                continue;
-            }
+            if ($escaped) { $escaped = false; continue; }
+            if ($char === '\\') { $escaped = true; continue; }
             if ($char === $delimiter) {
                 $modifiers = substr($pattern, $i + 1);
                 return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1;
@@ -259,9 +253,12 @@ class TelegramRouter
     {
         try {
             $middleware = TelegramBot::getGlobalMiddleware();
-
             $configuredLimits = config('telegram-bot-router.rate_limit.limits', []);
             $routeLimits = $route['rate_limits'] ?? [];
+
+            // Global limits from config and route-specific limits are independent.
+            // Route-specific limits override only the same scope. This allows a
+            // command-specific limit without changing the global user/chat limits.
             $limits = array_replace(is_array($configuredLimits) ? $configuredLimits : [], $routeLimits);
 
             if ((config('telegram-bot-router.rate_limit.enabled', false) || !empty($routeLimits)) && !empty($limits)) {
