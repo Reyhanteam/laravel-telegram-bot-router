@@ -156,7 +156,32 @@ class TelegramRouter
             $limits = array_replace(is_array($configuredLimits) ? $configuredLimits : [], $routeLimits);
             if ((config('telegram-bot-router.rate_limit.enabled', false) || !empty($routeLimits)) && !empty($limits)) array_unshift($middleware, new \ReyhanTeam\TelegramBotRouter\Middleware\TelegramRateLimitMiddleware($limits, $route));
             $middleware = array_merge($middleware, $route['middleware'] ?? []);
-            $destination = fn(TelegramUpdate $update): mixed => $this->resolveAction($route['callback'], $update);
+            $destination = function (TelegramUpdate $update) use ($route): mixed {
+                $queueConfig = $route['queue'] ?? [];
+                $queueEnabled = (bool) ($queueConfig['enabled'] ?? false)
+                    || (bool) config('telegram-bot-router.queue.updates', false);
+
+                if (!$queueEnabled) {
+                    return $this->resolveAction($route['callback'], $update);
+                }
+
+                if ($route['callback'] instanceof \Closure) {
+                    throw new \InvalidArgumentException('Queued Telegram routes must use a controller action or another serializable action. Closures cannot be queued.');
+                }
+
+                $job = new ProcessTelegramUpdateJob(
+                    $update->originalUpdate() instanceof \stdClass
+                        ? json_decode(json_encode($update->originalUpdate()), true)
+                        : (array) $update->originalUpdate(),
+                    $route,
+                );
+
+                if (!empty($queueConfig['queue'])) {
+                    $job->onQueue($queueConfig['queue']);
+                }
+
+                return dispatch($job);
+            };
             (new MiddlewarePipeline($middleware))->process($update, $destination);
         } catch (TelegramRouteException $e) { throw $e; } catch (Throwable $e) { throw new TelegramRouteException('Telegram route execution failed for [' . ($route['pattern'] ?? 'fallback') . ']: ' . $e->getMessage(), $route['pattern'] ?? null, $route['callback'] ?? null, $e); }
     }
@@ -164,7 +189,7 @@ class TelegramRouter
     public function processQueuedRoute(TelegramUpdate $update, array $route): void
     {
         TelegramBot::setApplication(app());
-        $this->execute($route, $update);
+        $this->resolveAction($route['callback'], $update);
     }
 
     protected function resolveAction($action, TelegramUpdate $update)
