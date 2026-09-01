@@ -18,6 +18,7 @@ class PollingProvider
     protected int $timeout;
     protected string $token;
     protected string $apiUrl;
+    protected array $allowedUpdates;
 
     public function __construct($router, array $config)
     {
@@ -26,6 +27,8 @@ class PollingProvider
         $this->timeout = max(1, (int) ($config['polling']['timeout'] ?? 30));
         $this->token = (string) ($config['token'] ?? '');
         $this->apiUrl = rtrim((string) ($config['polling']['api_url'] ?? 'https://api.telegram.org'), '/');
+        $allowedUpdates = $config['polling']['allowed_updates'] ?? [];
+        $this->allowedUpdates = is_array($allowedUpdates) ? array_values(array_filter($allowedUpdates, 'is_string')) : [];
 
         if ($this->token === '') {
             throw new \RuntimeException('Telegram bot token is not configured. Set TELEGRAM_BOT_TOKEN.');
@@ -80,7 +83,16 @@ class PollingProvider
 
     private function getUpdates(int $offset): array
     {
-        $url = $this->apiUrl.'/bot'.$this->token.'/getUpdates?offset='.$offset.'&timeout='.$this->timeout;
+        $query = [
+            'offset' => $offset,
+            'timeout' => $this->timeout,
+        ];
+
+        if ($this->allowedUpdates !== []) {
+            $query['allowed_updates'] = json_encode($this->allowedUpdates, JSON_THROW_ON_ERROR);
+        }
+
+        $url = $this->apiUrl.'/bot'.$this->token.'/getUpdates?'.http_build_query($query);
         $ch = curl_init($url);
 
         if ($ch === false) {
