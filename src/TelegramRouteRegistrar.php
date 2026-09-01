@@ -58,4 +58,11 @@ class TelegramRouteRegistrar
 
         return $this;
     }
+
+    public function queue(?string $queue = null): self
+    {
+        TelegramBot::enableQueue($this->routeIndex, $queue);
+
+        return $this;
+    }
 }
