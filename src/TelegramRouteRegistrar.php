@@ -8,6 +8,13 @@ class TelegramRouteRegistrar
     {
     }
 
+    public function name(string $name): self
+    {
+        TelegramBot::nameRoute($this->routeIndex, $name);
+
+        return $this;
+    }
+
     public function where(string $name, string $expression): self
     {
         TelegramBot::addConstraint($this->routeIndex, $name, $expression);
