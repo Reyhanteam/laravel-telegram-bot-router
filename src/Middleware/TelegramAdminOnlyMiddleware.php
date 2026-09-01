@@ -15,7 +15,12 @@ class TelegramAdminOnlyMiddleware
         $chatId = $update->chatId();
         $userId = $update->userId();
 
-        if ($chatId === null || $userId === null) return null;
+        if ($userId === null) return null;
+
+        $configuredAdmins = config('telegram-bot-router.authorization.admin_user_ids', []);
+        if (in_array((string) $userId, array_map('strval', is_array($configuredAdmins) ? $configuredAdmins : []), true)) return $next($update);
+
+        if ($chatId === null) return null;
 
         try {
             $member = Telegram::getChatMember([
