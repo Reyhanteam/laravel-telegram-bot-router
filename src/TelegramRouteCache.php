@@ -8,23 +8,65 @@ class TelegramRouteCache
 {
     public const CACHE_KEY = 'telegram_bot_router.routes';
 
+    protected static ?array $compiled = null;
+
     public static function cache(): array
     {
         $routes = TelegramBot::getRoutes();
         $compiled = self::compile($routes);
         Cache::forever(self::key(), $compiled);
+        self::$compiled = $compiled;
         return $compiled;
     }
 
     public static function clear(): bool
     {
+        self::$compiled = null;
         return Cache::forget(self::key());
     }
 
     public static function getCompiled(): ?array
     {
+        if (self::$compiled !== null) {
+            return self::$compiled;
+        }
+
         $cached = Cache::get(self::key());
-        return is_array($cached) ? $cached : null;
+        self::$compiled = is_array($cached) ? $cached : null;
+        return self::$compiled;
+    }
+
+    public static function getExactRouteIndexForUpdate(TelegramUpdate $update): ?int
+    {
+        $cached = self::getCompiled();
+        if ($cached === null || ($cached['fingerprint'] ?? null) !== self::fingerprint(TelegramBot::getRoutes())) {
+            return null;
+        }
+
+        if (isset($update->callback_query)) {
+            $pattern = (string) ($update->callback_query->data ?? '');
+            return $cached['exact_callbacks'][$pattern] ?? null;
+        }
+
+        if (!isset($update->message->text)) {
+            return null;
+        }
+
+        $text = trim((string) $update->message->text);
+        if ($text === '') {
+            return null;
+        }
+
+        if (str_starts_with($text, '/')) {
+            $parts = preg_split('/\s+/', $text, 2);
+            $command = $parts[0] ?? '';
+            if (str_contains($command, '@')) {
+                $command = explode('@', $command, 2)[0];
+            }
+            return $cached['exact_commands'][$command] ?? null;
+        }
+
+        return $cached['exact_text'][$text] ?? null;
     }
 
     public static function getExactRouteIndex(array $route): ?int
