@@ -5,346 +5,159 @@ declare(strict_types=1);
 namespace ReyhanTeam\TelegramBotRouter\Core;
 
 /**
- * Registry for supported Telegram Bot API methods.
+ * Single source of truth for the supported Telegram Bot API methods and
+ * their required/optional parameter metadata.
  *
- * Adding a new Telegram method only requires adding its name here. The HTTP
- * transport and the rest of the package do not need to change.
+ * Parameter names and required flags are based on the official Telegram
+ * Bot API documentation. The HTTP client consumes this registry for runtime
+ * normalization, while the BOT facade exposes the same contract to IDEs.
  */
 final class TelegramApiMethodRegistry
 {
-    /**
-     * @return list<string>
-     */
+    /** @var list<string> */
+    private const METHODS = [
+        'getMe', 'logOut', 'close', 'sendMessage', 'sendMessageDraft', 'sendPhoto', 'sendAudio', 'sendDocument', 'sendVideo', 'sendAnimation',
+        'sendVoice', 'sendVideoNote', 'sendPaidMedia', 'sendMediaGroup', 'sendLivePhoto', 'sendContact', 'sendLocation', 'sendVenue', 'sendPoll', 'sendDice',
+        'sendChatAction', 'sendGift', 'sendGame', 'sendInvoice', 'sendRichMessage', 'sendRichMessageDraft', 'getUserProfilePhotos', 'getUserProfileAudios', 'setUserEmojiStatus', 'getFile',
+        'banChatMember', 'unbanChatMember', 'restrictChatMember', 'promoteChatMember', 'setChatAdministratorCustomTitle', 'banChatSenderChat', 'unbanChatSenderChat', 'setChatPermissions', 'exportChatInviteLink', 'createChatInviteLink',
+        'editChatInviteLink', 'revokeChatInviteLink', 'approveChatJoinRequest', 'declineChatJoinRequest', 'answerChatJoinRequestQuery', 'sendChatJoinRequestWebApp', 'setChatPhoto', 'deleteChatPhoto', 'setChatTitle', 'setChatDescription',
+        'pinChatMessage', 'unpinChatMessage', 'unpinAllChatMessages', 'leaveChat', 'getChat', 'getChatAdministrators', 'getChatMemberCount', 'getChatMember', 'getUserPersonalChatMessages', 'setChatStickerSet',
+        'deleteChatStickerSet', 'getForumTopicIconStickers', 'createForumTopic', 'editForumTopic', 'closeForumTopic', 'reopenForumTopic', 'deleteForumTopic', 'unpinAllForumTopicMessages', 'editGeneralForumTopic', 'closeGeneralForumTopic',
+        'reopenGeneralForumTopic', 'hideGeneralForumTopic', 'unhideGeneralForumTopic', 'unpinAllGeneralForumTopicMessages', 'answerCallbackQuery', 'answerGuestQuery', 'getUserChatBoosts', 'getBusinessConnection', 'getManagedBotToken', 'replaceManagedBotToken',
+        'getManagedBotAccessSettings', 'setManagedBotAccessSettings', 'setMyCommands', 'deleteMyCommands', 'getMyCommands', 'setMyName', 'getMyName', 'setMyDescription', 'getMyDescription', 'setMyShortDescription',
+        'getMyShortDescription', 'setMyProfilePhoto', 'removeMyProfilePhoto', 'setChatMenuButton', 'getChatMenuButton', 'setMyDefaultAdministratorRights', 'getMyDefaultAdministratorRights', 'getAvailableGifts', 'giftPremiumSubscription', 'verifyUser',
+    ];
+
+    /** @var array<string, array{required: list<string>, optional: list<string>}> */
+    private const DEFINITIONS = [
+        'getMe' => ['required' => [], 'optional' => []],
+        'logOut' => ['required' => [], 'optional' => []],
+        'close' => ['required' => [], 'optional' => []],
+        'sendMessage' => ['required' => ['chat_id', 'text'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'parse_mode', 'entities', 'link_preview_options', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendMessageDraft' => ['required' => ['chat_id', 'draft_id'], 'optional' => ['text', 'message_thread_id', 'parse_mode', 'entities', 'link_preview_options', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'can_stop', 'keep_on_stop']],
+        'sendPhoto' => ['required' => ['chat_id', 'photo'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendAudio' => ['required' => ['chat_id', 'audio'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'performer', 'title', 'caption', 'parse_mode', 'caption_entities', 'thumbnail', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendDocument' => ['required' => ['chat_id', 'document'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'thumbnail', 'caption', 'parse_mode', 'caption_entities', 'disable_content_type_detection', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendVideo' => ['required' => ['chat_id', 'video'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'width', 'height', 'thumbnail', 'cover', 'start_timestamp', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'supports_streaming', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendAnimation' => ['required' => ['chat_id', 'animation'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'width', 'height', 'thumbnail', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendVoice' => ['required' => ['chat_id', 'voice'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'duration', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendVideoNote' => ['required' => ['chat_id', 'video_note'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'length', 'thumbnail', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendPaidMedia' => ['required' => ['chat_id', 'star_count', 'media'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'payload', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendMediaGroup' => ['required' => ['chat_id', 'media'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'disable_notification', 'protect_content']],
+        'sendLivePhoto' => ['required' => ['chat_id', 'live_photo', 'photo'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendContact' => ['required' => ['chat_id', 'phone_number', 'first_name'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'last_name', 'vcard', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendLocation' => ['required' => ['chat_id', 'latitude', 'longitude'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'horizontal_accuracy', 'live_period', 'heading', 'proximity_alert_radius', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendVenue' => ['required' => ['chat_id', 'latitude', 'longitude', 'title', 'address'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'foursquare_id', 'foursquare_type', 'google_place_id', 'google_place_type', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendPoll' => ['required' => ['chat_id', 'question', 'options'], 'optional' => ['business_connection_id', 'message_thread_id', 'question_parse_mode', 'question_entities', 'is_anonymous', 'type', 'allows_multiple_answers', 'correct_option_id', 'explanation', 'explanation_parse_mode', 'explanation_entities', 'open_period', 'close_date', 'is_closed', 'media', 'explanation_media', 'members_only', 'country_codes', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup']],
+        'sendDice' => ['required' => ['chat_id'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'emoji', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters']],
+        'sendChatAction' => ['required' => ['chat_id', 'action'], 'optional' => ['business_connection_id', 'message_thread_id']],
+        'sendGift' => ['required' => ['gift_id'], 'optional' => ['user_id', 'chat_id', 'pay_for_upgrade', 'text', 'text_parse_mode', 'text_entities']],
+        'sendGame' => ['required' => ['chat_id', 'game_short_name'], 'optional' => ['business_connection_id', 'message_thread_id', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'reply_parameters', 'reply_markup']],
+        'sendInvoice' => ['required' => ['chat_id', 'title', 'description', 'payload', 'currency', 'prices'], 'optional' => ['message_thread_id', 'direct_messages_topic_id', 'provider_token', 'max_tip_amount', 'suggested_tip_amounts', 'start_parameter', 'provider_data', 'photo_url', 'photo_size', 'photo_width', 'photo_height', 'need_name', 'need_phone_number', 'need_email', 'need_shipping_address', 'send_phone_number_to_provider', 'send_email_to_provider', 'is_flexible', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup']],
+        'sendRichMessage' => ['required' => ['chat_id', 'rich_message'], 'optional' => ['business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'ephemeral_message_parameters', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup']],
+        'sendRichMessageDraft' => ['required' => ['chat_id', 'draft_id', 'rich_message'], 'optional' => ['message_thread_id', 'ephemeral_message_parameters', 'can_stop', 'keep_on_stop']],
+        'getUserProfilePhotos' => ['required' => ['user_id'], 'optional' => ['offset', 'limit']],
+        'getUserProfileAudios' => ['required' => ['user_id'], 'optional' => ['offset', 'limit']],
+        'setUserEmojiStatus' => ['required' => ['user_id', 'emoji_status_custom_emoji_id'], 'optional' => ['emoji_status_expiration_date']],
+        'getFile' => ['required' => ['file_id'], 'optional' => []],
+        'banChatMember' => ['required' => ['chat_id', 'user_id'], 'optional' => ['until_date', 'revoke_messages']],
+        'unbanChatMember' => ['required' => ['chat_id', 'user_id'], 'optional' => ['only_if_banned']],
+        'restrictChatMember' => ['required' => ['chat_id', 'user_id', 'permissions'], 'optional' => ['use_independent_chat_permissions', 'until_date']],
+        'promoteChatMember' => ['required' => ['chat_id', 'user_id'], 'optional' => ['is_anonymous', 'can_manage_chat', 'can_delete_messages', 'can_manage_video_chats', 'can_restrict_members', 'can_promote_members', 'can_change_info', 'can_invite_users', 'can_post_stories', 'can_edit_stories', 'can_post_messages', 'can_edit_messages', 'can_pin_messages', 'can_manage_topics', 'can_manage_direct_messages', 'can_manage_tags', 'can_send_welcome_messages']],
+        'setChatAdministratorCustomTitle' => ['required' => ['chat_id', 'user_id', 'custom_title'], 'optional' => []],
+        'banChatSenderChat' => ['required' => ['chat_id', 'sender_chat_id'], 'optional' => []],
+        'unbanChatSenderChat' => ['required' => ['chat_id', 'sender_chat_id'], 'optional' => []],
+        'setChatPermissions' => ['required' => ['chat_id', 'permissions'], 'optional' => ['use_independent_chat_permissions']],
+        'exportChatInviteLink' => ['required' => ['chat_id'], 'optional' => []],
+        'createChatInviteLink' => ['required' => ['chat_id'], 'optional' => ['name', 'expire_date', 'member_limit', 'creates_join_request']],
+        'editChatInviteLink' => ['required' => ['chat_id', 'invite_link'], 'optional' => ['name', 'expire_date', 'member_limit', 'creates_join_request']],
+        'revokeChatInviteLink' => ['required' => ['chat_id', 'invite_link'], 'optional' => []],
+        'approveChatJoinRequest' => ['required' => ['chat_id', 'user_id'], 'optional' => []],
+        'declineChatJoinRequest' => ['required' => ['chat_id', 'user_id'], 'optional' => []],
+        'answerChatJoinRequestQuery' => ['required' => ['query_id', 'result'], 'optional' => []],
+        'sendChatJoinRequestWebApp' => ['required' => ['chat_join_request_query_id', 'web_app_url'], 'optional' => []],
+        'setChatPhoto' => ['required' => ['chat_id', 'photo'], 'optional' => []],
+        'deleteChatPhoto' => ['required' => ['chat_id'], 'optional' => []],
+        'setChatTitle' => ['required' => ['chat_id', 'title'], 'optional' => []],
+        'setChatDescription' => ['required' => ['chat_id'], 'optional' => ['description']],
+        'pinChatMessage' => ['required' => ['chat_id', 'message_id'], 'optional' => ['business_connection_id', 'disable_notification']],
+        'unpinChatMessage' => ['required' => ['chat_id'], 'optional' => ['business_connection_id', 'message_id']],
+        'unpinAllChatMessages' => ['required' => ['chat_id'], 'optional' => []],
+        'leaveChat' => ['required' => ['chat_id'], 'optional' => []],
+        'getChat' => ['required' => ['chat_id'], 'optional' => []],
+        'getChatAdministrators' => ['required' => ['chat_id'], 'optional' => ['return_bots']],
+        'getChatMemberCount' => ['required' => ['chat_id'], 'optional' => []],
+        'getChatMember' => ['required' => ['chat_id', 'user_id'], 'optional' => []],
+        'getUserPersonalChatMessages' => ['required' => ['user_id', 'limit'], 'optional' => []],
+        'setChatStickerSet' => ['required' => ['chat_id', 'sticker_set_name'], 'optional' => []],
+        'deleteChatStickerSet' => ['required' => ['chat_id'], 'optional' => []],
+        'getForumTopicIconStickers' => ['required' => [], 'optional' => []],
+        'createForumTopic' => ['required' => ['chat_id', 'name'], 'optional' => ['icon_color', 'icon_custom_emoji_id']],
+        'editForumTopic' => ['required' => ['chat_id', 'message_thread_id'], 'optional' => ['name', 'icon_custom_emoji_id']],
+        'closeForumTopic' => ['required' => ['chat_id', 'message_thread_id'], 'optional' => []],
+        'reopenForumTopic' => ['required' => ['chat_id', 'message_thread_id'], 'optional' => []],
+        'deleteForumTopic' => ['required' => ['chat_id', 'message_thread_id'], 'optional' => []],
+        'unpinAllForumTopicMessages' => ['required' => ['chat_id', 'message_thread_id'], 'optional' => []],
+        'editGeneralForumTopic' => ['required' => ['chat_id', 'name'], 'optional' => []],
+        'closeGeneralForumTopic' => ['required' => ['chat_id'], 'optional' => []],
+        'reopenGeneralForumTopic' => ['required' => ['chat_id'], 'optional' => []],
+        'hideGeneralForumTopic' => ['required' => ['chat_id'], 'optional' => []],
+        'unhideGeneralForumTopic' => ['required' => ['chat_id'], 'optional' => []],
+        'unpinAllGeneralForumTopicMessages' => ['required' => ['chat_id'], 'optional' => []],
+        'answerCallbackQuery' => ['required' => ['callback_query_id'], 'optional' => ['text', 'show_alert', 'url', 'cache_time']],
+        'answerGuestQuery' => ['required' => ['guest_query_id', 'result'], 'optional' => []],
+        'getUserChatBoosts' => ['required' => ['chat_id', 'user_id'], 'optional' => []],
+        'getBusinessConnection' => ['required' => ['business_connection_id'], 'optional' => []],
+        'getManagedBotToken' => ['required' => ['user_id'], 'optional' => []],
+        'replaceManagedBotToken' => ['required' => ['user_id'], 'optional' => []],
+        'getManagedBotAccessSettings' => ['required' => ['user_id'], 'optional' => []],
+        'setManagedBotAccessSettings' => ['required' => ['user_id', 'is_access_restricted'], 'optional' => ['added_user_ids']],
+        'setMyCommands' => ['required' => ['commands'], 'optional' => ['scope', 'language_code']],
+        'deleteMyCommands' => ['required' => [], 'optional' => ['scope', 'language_code']],
+        'getMyCommands' => ['required' => [], 'optional' => ['scope', 'language_code']],
+        'setMyName' => ['required' => [], 'optional' => ['name', 'language_code']],
+        'getMyName' => ['required' => [], 'optional' => ['language_code']],
+        'setMyDescription' => ['required' => [], 'optional' => ['description', 'language_code']],
+        'getMyDescription' => ['required' => [], 'optional' => ['language_code']],
+        'setMyShortDescription' => ['required' => [], 'optional' => ['short_description', 'language_code']],
+        'getMyShortDescription' => ['required' => [], 'optional' => ['language_code']],
+        'setMyProfilePhoto' => ['required' => ['photo'], 'optional' => []],
+        'removeMyProfilePhoto' => ['required' => [], 'optional' => []],
+        'setChatMenuButton' => ['required' => [], 'optional' => ['chat_id', 'menu_button']],
+        'getChatMenuButton' => ['required' => [], 'optional' => ['chat_id']],
+        'setMyDefaultAdministratorRights' => ['required' => [], 'optional' => ['rights', 'for_channels']],
+        'getMyDefaultAdministratorRights' => ['required' => [], 'optional' => ['for_channels']],
+        'getAvailableGifts' => ['required' => [], 'optional' => []],
+        'giftPremiumSubscription' => ['required' => ['user_id', 'month_count', 'star_count'], 'optional' => ['text', 'text_parse_mode', 'text_entities']],
+        'verifyUser' => ['required' => ['user_id'], 'optional' => ['custom_description']],
+    ];
+
+    /** @return list<string> */
     public static function methods(): array
     {
-        return [
-            'getMe',
-            'logOut',
-            'close',
-            'sendMessage',
-            'sendMessageDraft',
-            'sendPhoto',
-            'sendAudio',
-            'sendDocument',
-            'sendVideo',
-            'sendAnimation',
-            'sendVoice',
-            'sendVideoNote',
-            'sendPaidMedia',
-            'sendMediaGroup',
-            'sendLivePhoto',
-            'sendContact',
-            'sendLocation',
-            'sendVenue',
-            'sendPoll',
-            'sendDice',
-            'sendChatAction',
-            'sendGift',
-            'sendGame',
-            'sendInvoice',
-            'sendRichMessage',
-            'sendRichMessageDraft',
-            'getUserProfilePhotos',
-            'getUserProfileAudios',
-            'setUserEmojiStatus',
-            'getFile',
-            'banChatMember',
-            'unbanChatMember',
-            'restrictChatMember',
-            'promoteChatMember',
-            'setChatAdministratorCustomTitle',
-            'banChatSenderChat',
-            'unbanChatSenderChat',
-            'setChatPermissions',
-            'exportChatInviteLink',
-            'createChatInviteLink',
-            'editChatInviteLink',
-            'revokeChatInviteLink',
-            'approveChatJoinRequest',
-            'declineChatJoinRequest',
-            'answerChatJoinRequestQuery',
-            'sendChatJoinRequestWebApp',
-            'setChatPhoto',
-            'deleteChatPhoto',
-            'setChatTitle',
-            'setChatDescription',
-
-            // Telegram Bot API methods 51-100 in this package's registry.
-            'pinChatMessage',
-            'unpinChatMessage',
-            'unpinAllChatMessages',
-            'leaveChat',
-            'getChat',
-            'getChatAdministrators',
-            'getChatMemberCount',
-            'getChatMember',
-            'getUserPersonalChatMessages',
-            'setChatStickerSet',
-            'deleteChatStickerSet',
-            'getForumTopicIconStickers',
-            'createForumTopic',
-            'editForumTopic',
-            'closeForumTopic',
-            'reopenForumTopic',
-            'deleteForumTopic',
-            'unpinAllForumTopicMessages',
-            'editGeneralForumTopic',
-            'closeGeneralForumTopic',
-            'reopenGeneralForumTopic',
-            'hideGeneralForumTopic',
-            'unhideGeneralForumTopic',
-            'unpinAllGeneralForumTopicMessages',
-            'answerCallbackQuery',
-            'answerGuestQuery',
-            'getUserChatBoosts',
-            'getBusinessConnection',
-            'getManagedBotToken',
-            'replaceManagedBotToken',
-            'getManagedBotAccessSettings',
-            'setManagedBotAccessSettings',
-            'setMyCommands',
-            'deleteMyCommands',
-            'getMyCommands',
-            'setMyName',
-            'getMyName',
-            'setMyDescription',
-            'getMyDescription',
-            'setMyShortDescription',
-            'getMyShortDescription',
-            'setMyProfilePhoto',
-            'removeMyProfilePhoto',
-            'setChatMenuButton',
-            'getChatMenuButton',
-            'setMyDefaultAdministratorRights',
-            'getMyDefaultAdministratorRights',
-            'getAvailableGifts',
-            'giftPremiumSubscription',
-            'verifyUser',
-        ];
+        return self::METHODS;
     }
 
-    /**
-     * Return the parameter names defined by Telegram for a method.
-     *
-     * This metadata is descriptive for now; Telegram remains the final
-     * authority for validation, while the shared API client continues to
-     * forward parameters without duplicating request logic per method.
-     *
-     * @return array{required: list<string>, optional: list<string>}
-     */
+    /** @return array{required: list<string>, optional: list<string>} */
     public static function parameters(string $method): array
     {
-        $definitions = [
-            'pinChatMessage' => [
-                'required' => ['chat_id', 'message_id'],
-                'optional' => ['business_connection_id', 'disable_notification'],
-            ],
-            'unpinChatMessage' => [
-                'required' => ['chat_id'],
-                'optional' => ['business_connection_id', 'message_id'],
-            ],
-            'unpinAllChatMessages' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'leaveChat' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'getChat' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'getChatAdministrators' => [
-                'required' => ['chat_id'],
-                'optional' => ['return_bots'],
-            ],
-            'getChatMemberCount' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'getChatMember' => [
-                'required' => ['chat_id', 'user_id'],
-                'optional' => [],
-            ],
-            'getUserPersonalChatMessages' => [
-                'required' => ['user_id', 'limit'],
-                'optional' => [],
-            ],
-            'setChatStickerSet' => [
-                'required' => ['chat_id', 'sticker_set_name'],
-                'optional' => [],
-            ],
-            'deleteChatStickerSet' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'getForumTopicIconStickers' => [
-                'required' => [],
-                'optional' => [],
-            ],
-            'createForumTopic' => [
-                'required' => ['chat_id', 'name'],
-                'optional' => ['icon_color', 'icon_custom_emoji_id'],
-            ],
-            'editForumTopic' => [
-                'required' => ['chat_id', 'message_thread_id'],
-                'optional' => ['name', 'icon_custom_emoji_id'],
-            ],
-            'closeForumTopic' => [
-                'required' => ['chat_id', 'message_thread_id'],
-                'optional' => [],
-            ],
-            'reopenForumTopic' => [
-                'required' => ['chat_id', 'message_thread_id'],
-                'optional' => [],
-            ],
-            'deleteForumTopic' => [
-                'required' => ['chat_id', 'message_thread_id'],
-                'optional' => [],
-            ],
-            'unpinAllForumTopicMessages' => [
-                'required' => ['chat_id', 'message_thread_id'],
-                'optional' => [],
-            ],
-            'editGeneralForumTopic' => [
-                'required' => ['chat_id', 'name'],
-                'optional' => [],
-            ],
-            'closeGeneralForumTopic' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'reopenGeneralForumTopic' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'hideGeneralForumTopic' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'unhideGeneralForumTopic' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'unpinAllGeneralForumTopicMessages' => [
-                'required' => ['chat_id'],
-                'optional' => [],
-            ],
-            'answerCallbackQuery' => [
-                'required' => ['callback_query_id'],
-                'optional' => ['text', 'show_alert', 'url', 'cache_time'],
-            ],
-            'answerGuestQuery' => [
-                'required' => ['guest_query_id', 'result'],
-                'optional' => [],
-            ],
-            'getUserChatBoosts' => [
-                'required' => ['chat_id', 'user_id'],
-                'optional' => [],
-            ],
-            'getBusinessConnection' => [
-                'required' => ['business_connection_id'],
-                'optional' => [],
-            ],
-            'getManagedBotToken' => [
-                'required' => ['user_id'],
-                'optional' => [],
-            ],
-            'replaceManagedBotToken' => [
-                'required' => ['user_id'],
-                'optional' => [],
-            ],
-            'getManagedBotAccessSettings' => [
-                'required' => ['user_id'],
-                'optional' => [],
-            ],
-            'setManagedBotAccessSettings' => [
-                'required' => ['user_id', 'is_access_restricted'],
-                'optional' => ['added_user_ids'],
-            ],
-            'setMyCommands' => [
-                'required' => ['commands'],
-                'optional' => ['scope', 'language_code'],
-            ],
-            'deleteMyCommands' => [
-                'required' => [],
-                'optional' => ['scope', 'language_code'],
-            ],
-            'getMyCommands' => [
-                'required' => [],
-                'optional' => ['scope', 'language_code'],
-            ],
-            'setMyName' => [
-                'required' => [],
-                'optional' => ['name', 'language_code'],
-            ],
-            'getMyName' => [
-                'required' => [],
-                'optional' => ['language_code'],
-            ],
-            'setMyDescription' => [
-                'required' => [],
-                'optional' => ['description', 'language_code'],
-            ],
-            'getMyDescription' => [
-                'required' => [],
-                'optional' => ['language_code'],
-            ],
-            'setMyShortDescription' => [
-                'required' => [],
-                'optional' => ['short_description', 'language_code'],
-            ],
-            'getMyShortDescription' => [
-                'required' => [],
-                'optional' => ['language_code'],
-            ],
-            'setMyProfilePhoto' => [
-                'required' => ['photo'],
-                'optional' => [],
-            ],
-            'removeMyProfilePhoto' => [
-                'required' => [],
-                'optional' => [],
-            ],
-            'setChatMenuButton' => [
-                'required' => [],
-                'optional' => ['chat_id', 'menu_button'],
-            ],
-            'getChatMenuButton' => [
-                'required' => [],
-                'optional' => ['chat_id'],
-            ],
-            'setMyDefaultAdministratorRights' => [
-                'required' => [],
-                'optional' => ['rights', 'for_channels'],
-            ],
-            'getMyDefaultAdministratorRights' => [
-                'required' => [],
-                'optional' => ['for_channels'],
-            ],
-            'getAvailableGifts' => [
-                'required' => [],
-                'optional' => [],
-            ],
-            'giftPremiumSubscription' => [
-                'required' => ['user_id', 'month_count', 'star_count'],
-                'optional' => ['text', 'text_parse_mode', 'text_entities'],
-            ],
-            'verifyUser' => [
-                'required' => ['user_id'],
-                'optional' => ['custom_description'],
-            ],
-        ];
+        if (!self::supports($method)) {
+            throw new \InvalidArgumentException(sprintf('Telegram API method [%s] is not supported.', $method));
+        }
 
-        return $definitions[$method] ?? [
-            'required' => [],
-            'optional' => [],
-        ];
+        return self::DEFINITIONS[$method];
+    }
+
+    /** @return list<string> */
+    public static function parameterNames(string $method): array
+    {
+        $definition = self::parameters($method);
+
+        return [...$definition['required'], ...$definition['optional']];
     }
 
     public static function supports(string $method): bool
     {
-        return in_array($method, self::methods(), true);
+        return in_array($method, self::METHODS, true);
     }
 }
