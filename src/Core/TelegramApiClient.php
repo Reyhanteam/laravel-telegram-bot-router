@@ -9,70 +9,15 @@ use GuzzleHttp\Exception\GuzzleException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
 use RuntimeException;
 
+/**
+ * Shared Telegram Bot API HTTP client.
+ *
+ * The method registry is the single source of truth for parameter order and
+ * required/optional metadata. This class only normalizes developer arguments
+ * and sends the request. It does not duplicate HTTP logic per Telegram method.
+ */
 final class TelegramApiClient
 {
-    /**
-     * Developer-facing positional parameter names for the first API methods.
-     *
-     * The registry remains the single source of truth for the complete API
-     * method list and the existing metadata. These entries define the public
-     * ergonomic order: required values first, optional values afterwards.
-     *
-     * @var array<string, list<string>>
-     */
-    private const DEVELOPER_PARAMETERS = [
-        'getMe' => [],
-        'logOut' => [],
-        'close' => [],
-        'sendMessage' => ['chat_id', 'text', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'parse_mode', 'entities', 'link_preview_options', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendMessageDraft' => ['chat_id', 'draft_id', 'text', 'message_thread_id', 'parse_mode', 'entities', 'link_preview_options', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'can_stop', 'keep_on_stop'],
-        'sendPhoto' => ['chat_id', 'photo', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendAudio' => ['chat_id', 'audio', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'performer', 'title', 'caption', 'parse_mode', 'caption_entities', 'thumbnail', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendDocument' => ['chat_id', 'document', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'thumbnail', 'caption', 'parse_mode', 'caption_entities', 'disable_content_type_detection', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendVideo' => ['chat_id', 'video', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'width', 'height', 'thumbnail', 'cover', 'start_timestamp', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'supports_streaming', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendAnimation' => ['chat_id', 'animation', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'width', 'height', 'thumbnail', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendVoice' => ['chat_id', 'voice', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'duration', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendVideoNote' => ['chat_id', 'video_note', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'duration', 'length', 'thumbnail', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendPaidMedia' => ['chat_id', 'star_count', 'media', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'payload', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendMediaGroup' => ['chat_id', 'media', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'disable_notification', 'protect_content'],
-        'sendLivePhoto' => ['chat_id', 'live_photo', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'caption', 'parse_mode', 'caption_entities', 'show_caption_above_media', 'has_spoiler', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendContact' => ['chat_id', 'phone_number', 'first_name', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'last_name', 'vcard', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendLocation' => ['chat_id', 'latitude', 'longitude', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'horizontal_accuracy', 'live_period', 'heading', 'proximity_alert_radius', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendVenue' => ['chat_id', 'latitude', 'longitude', 'title', 'address', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'foursquare_id', 'foursquare_type', 'google_place_id', 'google_place_type', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendPoll' => ['chat_id', 'question', 'options', 'business_connection_id', 'message_thread_id', 'question_parse_mode', 'question_entities', 'is_anonymous', 'type', 'allows_multiple_answers', 'correct_option_id', 'explanation', 'explanation_parse_mode', 'explanation_entities', 'open_period', 'close_date', 'is_closed', 'media', 'explanation_media', 'members_only', 'country_codes', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup'],
-        'sendDice' => ['chat_id', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'emoji', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup', 'ephemeral_message_parameters'],
-        'sendChatAction' => ['chat_id', 'action', 'business_connection_id', 'message_thread_id'],
-        'sendGift' => ['gift_id', 'user_id', 'chat_id', 'pay_for_upgrade', 'text', 'text_parse_mode', 'text_entities'],
-        'sendGame' => ['chat_id', 'game_short_name', 'business_connection_id', 'message_thread_id', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'reply_parameters', 'reply_markup'],
-        'sendInvoice' => ['chat_id', 'title', 'description', 'payload', 'currency', 'prices', 'message_thread_id', 'direct_messages_topic_id', 'provider_token', 'max_tip_amount', 'suggested_tip_amounts', 'start_parameter', 'provider_data', 'photo_url', 'photo_size', 'photo_width', 'photo_height', 'need_name', 'need_phone_number', 'need_email', 'need_shipping_address', 'send_phone_number_to_provider', 'send_email_to_provider', 'is_flexible', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup'],
-        'sendRichMessage' => ['chat_id', 'rich_message', 'business_connection_id', 'message_thread_id', 'direct_messages_topic_id', 'ephemeral_message_parameters', 'disable_notification', 'protect_content', 'allow_paid_broadcast', 'message_effect_id', 'suggested_post_parameters', 'reply_parameters', 'reply_markup'],
-        'sendRichMessageDraft' => ['chat_id', 'draft_id', 'rich_message', 'message_thread_id', 'ephemeral_message_parameters', 'can_stop', 'keep_on_stop'],
-        'getUserProfilePhotos' => ['user_id', 'offset', 'limit'],
-        'getUserProfileAudios' => ['user_id', 'offset', 'limit'],
-        'setUserEmojiStatus' => ['user_id', 'emoji_status_custom_emoji_id', 'emoji_status_expiration_date'],
-        'getFile' => ['file_id'],
-        'banChatMember' => ['chat_id', 'user_id', 'until_date', 'revoke_messages'],
-        'unbanChatMember' => ['chat_id', 'user_id', 'only_if_banned'],
-        'restrictChatMember' => ['chat_id', 'user_id', 'permissions', 'use_independent_chat_permissions', 'until_date'],
-        'promoteChatMember' => ['chat_id', 'user_id', 'is_anonymous', 'can_manage_chat', 'can_delete_messages', 'can_manage_video_chats', 'can_restrict_members', 'can_promote_members', 'can_change_info', 'can_invite_users', 'can_post_stories', 'can_edit_stories', 'can_post_messages', 'can_edit_messages', 'can_pin_messages', 'can_manage_topics', 'can_manage_direct_messages', 'can_manage_tags', 'can_send_welcome_messages'],
-        'setChatAdministratorCustomTitle' => ['chat_id', 'user_id', 'custom_title'],
-        'banChatSenderChat' => ['chat_id', 'sender_chat_id'],
-        'unbanChatSenderChat' => ['chat_id', 'sender_chat_id'],
-        'setChatPermissions' => ['chat_id', 'permissions', 'use_independent_chat_permissions'],
-        'exportChatInviteLink' => ['chat_id'],
-        'createChatInviteLink' => ['chat_id', 'name', 'expire_date', 'member_limit', 'creates_join_request'],
-        'editChatInviteLink' => ['chat_id', 'invite_link', 'name', 'expire_date', 'member_limit', 'creates_join_request'],
-        'revokeChatInviteLink' => ['chat_id', 'invite_link'],
-        'approveChatJoinRequest' => ['chat_id', 'user_id'],
-        'declineChatJoinRequest' => ['chat_id', 'user_id'],
-        'answerChatJoinRequestQuery' => ['query_id', 'result'],
-        'sendChatJoinRequestWebApp' => ['chat_join_request_query_id', 'web_app_url'],
-        'setChatPhoto' => ['chat_id', 'photo'],
-        'deleteChatPhoto' => ['chat_id'],
-        'setChatTitle' => ['chat_id', 'title'],
-        'setChatDescription' => ['chat_id', 'description'],
-    ];
-
     public function __construct(
         private readonly ClientInterface $http,
         private readonly string $token,
@@ -123,7 +68,7 @@ final class TelegramApiClient
     }
 
     /**
-     * Supports both the legacy associative-array API and the new ergonomic API:
+     * Supports both the legacy associative-array API and the ergonomic API:
      *
      *     $client->sendMessage($chatId, 'Hello');
      *     $client->sendMessage($chatId, 'Hello', parseMode: 'HTML');
@@ -141,21 +86,21 @@ final class TelegramApiClient
     /** @param list<mixed>|array<string, mixed> $arguments */
     private function normalizeDeveloperArguments(string $method, array $arguments): array
     {
-        $names = self::DEVELOPER_PARAMETERS[$method] ?? $this->registryParameterNames($method);
-
-        if ($names === []) {
-            if ($arguments !== []) {
-                throw new \InvalidArgumentException(sprintf('Method [%s] does not accept parameters.', $method));
-            }
-            return [];
-        }
+        $definition = TelegramApiMethodRegistry::parameters($method);
+        $names = TelegramApiMethodRegistry::parameterNames($method);
 
         $parameters = [];
         $position = 0;
 
         foreach ($arguments as $key => $value) {
             if (is_string($key)) {
-                $parameters[$this->toApiParameterName($key)] = $value;
+                $apiName = $this->toApiParameterName($key);
+
+                if (!in_array($apiName, $names, true)) {
+                    throw new \InvalidArgumentException(sprintf('Unknown parameter [%s] for Telegram API method [%s].', $key, $method));
+                }
+
+                $parameters[$apiName] = $value;
                 continue;
             }
 
@@ -167,7 +112,6 @@ final class TelegramApiClient
             $position++;
         }
 
-        $definition = TelegramApiMethodRegistry::parameters($method);
         foreach ($definition['required'] as $required) {
             if (!array_key_exists($required, $parameters)) {
                 throw new \ArgumentCountError(sprintf('Missing required parameter [%s] for Telegram API method [%s].', $required, $method));
@@ -175,13 +119,6 @@ final class TelegramApiClient
         }
 
         return array_filter($parameters, static fn ($value): bool => $value !== null);
-    }
-
-    /** @return list<string> */
-    private function registryParameterNames(string $method): array
-    {
-        $definition = TelegramApiMethodRegistry::parameters($method);
-        return array_values(array_unique(array_merge($definition['required'], $definition['optional'])));
     }
 
     private function toApiParameterName(string $name): string
@@ -211,6 +148,7 @@ final class TelegramApiClient
             if (is_resource($value) || $value instanceof \CURLFile) {
                 return true;
             }
+
             if (is_array($value) && $this->containsUpload($value)) {
                 return true;
             }
@@ -223,8 +161,12 @@ final class TelegramApiClient
     private function toMultipart(array $parameters): array
     {
         $parts = [];
+
         foreach ($parameters as $name => $value) {
-            $parts[] = ['name' => (string) $name, 'contents' => is_array($value) ? json_encode($value, JSON_THROW_ON_ERROR) : $value];
+            $parts[] = [
+                'name' => (string) $name,
+                'contents' => is_array($value) ? json_encode($value, JSON_THROW_ON_ERROR) : $value,
+            ];
         }
 
         return $parts;
