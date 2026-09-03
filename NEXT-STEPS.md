@@ -4,6 +4,8 @@ This document is the implementation plan for the next major development stages o
 
 The goal is to finish the most important Core capabilities first, make the package production-ready, then build the official documentation and move toward advanced Telegram features.
 
+> **Status in this document is based on a direct audit of the current Repository implementation. A checked item means the corresponding capability exists in the current codebase; an unchecked item means it is not currently implemented as a dedicated capability.**
+
 ---
 
 ## 🔴 Priority 14 — Advanced Callback Query Routing ⭐⭐⭐
@@ -15,15 +17,15 @@ Goal: make Callback Query routing as powerful and structured as the package's ot
 - [x] Named callback routes
 - [x] Callback route parameters
 - [x] Inline keyboard integration
-- [ ] Exact callback data matching
+- [x] Exact callback data matching
 - [ ] Regular expression callback matching
-- [ ] Callback parameter constraints
-- [ ] Multiple callback parameters
+- [x] Callback parameter constraints
+- [x] Multiple callback parameters
 - [ ] Callback route groups
-- [ ] Callback middleware integration
-- [ ] Callback route fallback
-- [ ] Callback route priority / matching order
-- [ ] Callback route caching support
+- [x] Callback middleware integration
+- [x] Callback route fallback
+- [x] Callback route priority / matching order
+- [x] Callback route caching support
 
 Example:
 
@@ -60,7 +62,9 @@ The core Queue system already exists. This priority makes Queue processing produ
 - [ ] Job middleware support
 - [ ] Prevent duplicate update processing
 - [ ] Queue logging
-- [ ] Queue configuration
+- [x] Queue configuration
+
+> **Audit note:** queue message sending has a `SendTelegramMessageJob`, but its current implementation still references the removed `irazasyed/telegram-bot-sdk` facade. It is therefore considered an existing queue implementation, but it still needs to be migrated to the package's current Telegram API client before it can be considered production-ready.
 
 Example:
 
@@ -89,21 +93,21 @@ This priority creates the testing foundation for the package. Every future featu
 - [ ] Command route assertions
 - [ ] Text route assertions
 - [ ] Callback route assertions
-- [ ] Middleware testing
-- [ ] Conversation testing
+- [x] Middleware testing
+- [x] Conversation testing
 - [ ] Event testing
 - [ ] Queue testing
-- [ ] Rate limit testing
+- [x] Rate limit testing
 - [ ] Webhook testing
 - [ ] Polling testing
-- [ ] Telegram API response mocking
+- [x] Telegram API response mocking
 - [ ] Assert sent messages
 - [ ] Assert sent keyboards
 - [ ] Assert callbacks
 - [ ] Assert controller execution
-- [ ] PHPUnit integration
-- [ ] Laravel testing integration
-- [ ] Example test suite
+- [x] PHPUnit integration
+- [x] Laravel testing integration
+- [x] Example test suite
 
 Example target API:
 
@@ -125,6 +129,8 @@ Telegram::assertMessageSent('Welcome!');
 ## 🟠 Priority 17 — Bot Context ⭐⭐⭐⭐
 
 Goal: provide a clean, consistent context object containing the current Telegram update and its related data.
+
+> The Repository currently provides `TelegramUpdate` with accessors such as `chatId()`, `userId()`, `messageId()`, `text()`, `callbackQueryData()`, `commandArguments()`, and route-parameter access. A dedicated `TelegramContext` abstraction is not implemented yet, so the context-specific checklist below remains unchecked.
 
 - [ ] Telegram Bot Context
 - [ ] Current Update
@@ -163,32 +169,34 @@ public function index(TelegramContext $context)
 Goal: provide a clean Laravel-friendly API for sending and managing Telegram responses.
 
 - [ ] Telegram response API
-- [ ] Send message
-- [ ] Reply to message
-- [ ] Edit message
-- [ ] Delete message
-- [ ] Send photo
-- [ ] Send video
-- [ ] Send audio
-- [ ] Send document
-- [ ] Send animation
-- [ ] Send voice
-- [ ] Send location
-- [ ] Send contact
-- [ ] Send venue
-- [ ] Send sticker
-- [ ] Answer callback query
-- [ ] Edit callback message
-- [ ] Chat action
-- [ ] Parse mode support
-- [ ] Reply markup support
-- [ ] Inline keyboard support
-- [ ] Reply keyboard support
-- [ ] Force reply support
-- [ ] Message options
+- [x] Send message
+- [x] Reply to message
+- [x] Edit message
+- [x] Delete message
+- [x] Send photo
+- [x] Send video
+- [x] Send audio
+- [x] Send document
+- [x] Send animation
+- [x] Send voice
+- [x] Send location
+- [x] Send contact
+- [x] Send venue
+- [x] Send sticker
+- [x] Answer callback query
+- [x] Edit callback message
+- [x] Chat action
+- [x] Parse mode support
+- [x] Reply markup support
+- [x] Inline keyboard support
+- [x] Reply keyboard support
+- [x] Force reply support
+- [x] Message options
 - [ ] Response objects
 - [ ] Response chaining
 - [ ] Queued responses
+
+> **Audit note:** the package now has a large developer-friendly `BOT::...` Telegram API surface with typed static methods and optional/named arguments. The dedicated higher-level `TelegramResponse` abstraction, response objects, response chaining, and current-client queued responses are not implemented yet.
 
 Example:
 
@@ -225,6 +233,8 @@ This priority should follow the Response API because keyboards are closely integ
 - [ ] Keyboard integration with callbacks
 - [ ] Keyboard integration with responses
 - [ ] Keyboard testing helpers
+
+> **Audit note:** keyboard structures can currently be passed directly as Telegram `reply_markup` arrays, including inline and reply keyboards, but there is no dedicated `Keyboard`/builder abstraction with chaining, factories, validation, or testing helpers.
 
 Example:
 
