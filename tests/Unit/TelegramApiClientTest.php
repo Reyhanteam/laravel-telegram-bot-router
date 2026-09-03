@@ -106,6 +106,41 @@ final class TelegramApiClientTest extends TestCase
         $this->assertSame(['language_code' => 'en'], $this->lastRequestBody());
     }
 
+    public function test_send_message_accepts_positional_arguments_and_named_optional_arguments(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => ['message_id' => 100, 'chat' => ['id' => 123]],
+        ]);
+
+        $result = $client->sendMessage(123, 'Hello', parseMode: 'HTML');
+
+        $this->assertSame(100, $result['message_id']);
+        $this->assertSame('/botTEST_TOKEN/sendMessage', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'text' => 'Hello',
+            'parse_mode' => 'HTML',
+        ], $this->lastRequestBody());
+    }
+
+    public function test_pin_chat_message_accepts_positional_arguments(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->pinChatMessage(-1001234567890, 321);
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/pinChatMessage', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => -1001234567890,
+            'message_id' => 321,
+        ], $this->lastRequestBody());
+    }
+
     /** @param array<string, mixed> $payload */
     private function client(array $payload): TelegramApiClient
     {
