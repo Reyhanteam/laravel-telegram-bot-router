@@ -10,6 +10,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Orchestra\Testbench\TestCase;
 use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
+use ReyhanTeam\TelegramBotRouter\Core\TelegramApiMethodRegistry;
 
 final class TelegramApiClientTest extends TestCase
 {
@@ -139,6 +140,46 @@ final class TelegramApiClientTest extends TestCase
             'chat_id' => -1001234567890,
             'message_id' => 321,
         ], $this->lastRequestBody());
+    }
+
+    public function test_send_live_photo_requires_both_media_values_in_registry_order(): void
+    {
+        $this->assertSame(
+            ['chat_id', 'live_photo', 'photo'],
+            TelegramApiMethodRegistry::parameters('sendLivePhoto')['required'],
+        );
+    }
+
+    public function test_registry_contains_exactly_the_package_api_methods(): void
+    {
+        $methods = TelegramApiMethodRegistry::methods();
+
+        $this->assertCount(100, $methods);
+        $this->assertCount(100, array_unique($methods));
+
+        foreach ($methods as $method) {
+            $definition = TelegramApiMethodRegistry::parameters($method);
+            $this->assertSame(
+                [...$definition['required'], ...$definition['optional']],
+                TelegramApiMethodRegistry::parameterNames($method),
+            );
+        }
+    }
+
+    public function test_unknown_named_parameter_is_rejected(): void
+    {
+        $client = $this->client(['ok' => true, 'result' => true]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $client->pinChatMessage(123, 456, unknownOption: true);
+    }
+
+    public function test_missing_required_parameter_is_rejected(): void
+    {
+        $client = $this->client(['ok' => true, 'result' => true]);
+
+        $this->expectException(\ArgumentCountError::class);
+        $client->pinChatMessage(123);
     }
 
     /** @param array<string, mixed> $payload */
