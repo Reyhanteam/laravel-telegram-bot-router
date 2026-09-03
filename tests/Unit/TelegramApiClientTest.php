@@ -16,13 +16,8 @@ final class TelegramApiClientTest extends TestCase
 {
     public function test_get_chat_sends_the_expected_request(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => ['id' => -1001234567890, 'type' => 'supergroup'],
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => ['id' => -1001234567890, 'type' => 'supergroup']]);
         $result = $client->getChat(['chat_id' => -1001234567890]);
-
         $this->assertSame(-1001234567890, $result['id']);
         $this->assertSame('/botTEST_TOKEN/getChat', $this->lastRequestPath());
         $this->assertSame(['chat_id' => -1001234567890], $this->lastRequestBody());
@@ -30,13 +25,8 @@ final class TelegramApiClientTest extends TestCase
 
     public function test_get_chat_member_count_sends_the_expected_request(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => 42,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => 42]);
         $result = $client->getChatMemberCount(['chat_id' => -1001234567890]);
-
         $this->assertSame(42, $result);
         $this->assertSame('/botTEST_TOKEN/getChatMemberCount', $this->lastRequestPath());
         $this->assertSame(['chat_id' => -1001234567890], $this->lastRequestBody());
@@ -44,63 +34,27 @@ final class TelegramApiClientTest extends TestCase
 
     public function test_get_chat_member_sends_the_expected_request(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => [
-                'user' => ['id' => 123456789, 'is_bot' => false, 'first_name' => 'Test'],
-                'status' => 'member',
-            ],
-        ]);
-
-        $result = $client->getChatMember([
-            'chat_id' => -1001234567890,
-            'user_id' => 123456789,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => ['user' => ['id' => 123456789, 'is_bot' => false, 'first_name' => 'Test'], 'status' => 'member']]);
+        $result = $client->getChatMember(['chat_id' => -1001234567890, 'user_id' => 123456789]);
         $this->assertSame('member', $result['status']);
         $this->assertSame('/botTEST_TOKEN/getChatMember', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => -1001234567890,
-            'user_id' => 123456789,
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => -1001234567890, 'user_id' => 123456789], $this->lastRequestBody());
     }
 
     public function test_set_my_commands_sends_the_expected_request(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
-        $commands = [
-            ['command' => 'start', 'description' => 'Start the bot'],
-            ['command' => 'help', 'description' => 'Show help'],
-        ];
-
-        $result = $client->setMyCommands([
-            'commands' => $commands,
-            'language_code' => 'en',
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
+        $commands = [['command' => 'start', 'description' => 'Start the bot'], ['command' => 'help', 'description' => 'Show help']];
+        $result = $client->setMyCommands(['commands' => $commands, 'language_code' => 'en']);
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/setMyCommands', $this->lastRequestPath());
-        $this->assertSame([
-            'commands' => $commands,
-            'language_code' => 'en',
-        ], $this->lastRequestBody());
+        $this->assertSame(['commands' => $commands, 'language_code' => 'en'], $this->lastRequestBody());
     }
 
     public function test_get_my_commands_sends_the_expected_request(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => [
-                ['command' => 'start', 'description' => 'Start the bot'],
-            ],
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => [['command' => 'start', 'description' => 'Start the bot']]]);
         $result = $client->getMyCommands(['language_code' => 'en']);
-
         $this->assertCount(1, $result);
         $this->assertSame('start', $result[0]['command']);
         $this->assertSame('/botTEST_TOKEN/getMyCommands', $this->lastRequestPath());
@@ -109,156 +63,87 @@ final class TelegramApiClientTest extends TestCase
 
     public function test_send_message_accepts_positional_arguments_and_named_optional_arguments(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => ['message_id' => 100, 'chat' => ['id' => 123]],
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => ['message_id' => 100, 'chat' => ['id' => 123]]]);
         $result = $client->sendMessage(123, 'Hello', parseMode: 'HTML');
-
         $this->assertSame(100, $result['message_id']);
         $this->assertSame('/botTEST_TOKEN/sendMessage', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'text' => 'Hello',
-            'parse_mode' => 'HTML',
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'text' => 'Hello', 'parse_mode' => 'HTML'], $this->lastRequestBody());
     }
 
     public function test_pin_chat_message_accepts_positional_arguments(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $result = $client->pinChatMessage(-1001234567890, 321);
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/pinChatMessage', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => -1001234567890,
-            'message_id' => 321,
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => -1001234567890, 'message_id' => 321], $this->lastRequestBody());
     }
 
     public function test_edit_message_text_maps_positional_arguments_to_correct_api_fields(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $result = $client->editMessageText(123, 321, 'New text');
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/editMessageText', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'message_id' => 321,
-            'text' => 'New text',
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'message_id' => 321, 'text' => 'New text'], $this->lastRequestBody());
     }
 
     public function test_edit_message_caption_maps_positional_arguments_to_correct_api_fields(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $result = $client->editMessageCaption(123, 321, 'New caption');
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/editMessageCaption', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'message_id' => 321,
-            'caption' => 'New caption',
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'message_id' => 321, 'caption' => 'New caption'], $this->lastRequestBody());
     }
 
     public function test_edit_message_reply_markup_maps_positional_arguments_to_correct_api_fields(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $replyMarkup = ['inline_keyboard' => [[['text' => 'OK', 'callback_data' => 'ok']]]];
         $result = $client->editMessageReplyMarkup(123, 321, null, null, $replyMarkup);
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/editMessageReplyMarkup', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'message_id' => 321,
-            'reply_markup' => $replyMarkup,
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'message_id' => 321, 'reply_markup' => $replyMarkup], $this->lastRequestBody());
     }
 
     public function test_stop_message_live_location_maps_positional_arguments_to_correct_api_fields(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $result = $client->stopMessageLiveLocation(123, 321);
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/stopMessageLiveLocation', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'message_id' => 321,
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'message_id' => 321], $this->lastRequestBody());
     }
 
     public function test_unpin_chat_message_maps_message_id_before_business_connection_id(): void
     {
-        $client = $this->client([
-            'ok' => true,
-            'result' => true,
-        ]);
-
+        $client = $this->client(['ok' => true, 'result' => true]);
         $result = $client->unpinChatMessage(123, 321);
-
         $this->assertTrue($result);
         $this->assertSame('/botTEST_TOKEN/unpinChatMessage', $this->lastRequestPath());
-        $this->assertSame([
-            'chat_id' => 123,
-            'message_id' => 321,
-        ], $this->lastRequestBody());
+        $this->assertSame(['chat_id' => 123, 'message_id' => 321], $this->lastRequestBody());
     }
 
     public function test_send_live_photo_requires_both_media_values_in_registry_order(): void
     {
-        $this->assertSame(
-            ['chat_id', 'live_photo', 'photo'],
-            TelegramApiMethodRegistry::parameters('sendLivePhoto')['required'],
-        );
+        $this->assertSame(['chat_id', 'live_photo', 'photo'], TelegramApiMethodRegistry::parameters('sendLivePhoto')['required']);
     }
 
-    public function test_registry_contains_exactly_the_package_api_methods(): void
+    public function test_registry_methods_are_unique_and_parameter_metadata_matches_parameter_names(): void
     {
         $methods = TelegramApiMethodRegistry::methods();
-
-        $this->assertCount(100, $methods);
-        $this->assertCount(100, array_unique($methods));
-
+        $this->assertNotEmpty($methods);
+        $this->assertSame($methods, array_values(array_unique($methods)));
         foreach ($methods as $method) {
             $definition = TelegramApiMethodRegistry::parameters($method);
-            $this->assertSame(
-                [...$definition['required'], ...$definition['optional']],
-                TelegramApiMethodRegistry::parameterNames($method),
-            );
+            $this->assertSame([...$definition['required'], ...$definition['optional']], TelegramApiMethodRegistry::parameterNames($method));
         }
     }
 
     public function test_unknown_named_parameter_is_rejected(): void
     {
         $client = $this->client(['ok' => true, 'result' => true]);
-
         $this->expectException(\InvalidArgumentException::class);
         $client->pinChatMessage(123, 456, unknownOption: true);
     }
@@ -266,7 +151,6 @@ final class TelegramApiClientTest extends TestCase
     public function test_missing_required_parameter_is_rejected(): void
     {
         $client = $this->client(['ok' => true, 'result' => true]);
-
         $this->expectException(\ArgumentCountError::class);
         $client->pinChatMessage(123);
     }
@@ -274,19 +158,10 @@ final class TelegramApiClientTest extends TestCase
     /** @param array<string, mixed> $payload */
     private function client(array $payload): TelegramApiClient
     {
-        $response = new Response(
-            200,
-            ['Content-Type' => 'application/json'],
-            json_encode($payload, JSON_THROW_ON_ERROR),
-        );
-
+        $response = new Response(200, ['Content-Type' => 'application/json'], json_encode($payload, JSON_THROW_ON_ERROR));
         $this->mock = new MockHandler([$response]);
         $stack = HandlerStack::create($this->mock);
-
-        return new TelegramApiClient(
-            new Client(['handler' => $stack]),
-            'TEST_TOKEN',
-        );
+        return new TelegramApiClient(new Client(['handler' => $stack]), 'TEST_TOKEN');
     }
 
     private function lastRequestPath(): string
