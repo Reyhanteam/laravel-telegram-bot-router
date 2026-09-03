@@ -1,210 +1,245 @@
-🗺️ ReyhanTeam Laravel Telegram Bot Router — Roadmap
+# 🗺️ ReyhanTeam Laravel Telegram Bot Router — Roadmap
 
-«A Laravel-native routing and management system for Telegram bots.»
+> «A Laravel-native routing and management system for Telegram bots.»
 
-این Roadmap مسیر توسعه‌ی "ReyhanTeam/laravel-telegram-bot-router" را از هسته‌ی Routing تا تبدیل شدن به یک اکوسیستم کامل برای توسعه‌ی ربات‌های Telegram در Laravel مشخص می‌کند.
+این Roadmap مسیر توسعه‌ی `ReyhanTeam/laravel-telegram-bot-router` را از هسته‌ی Routing تا تبدیل شدن به یک اکوسیستم کامل برای توسعه‌ی ربات‌های Telegram در Laravel مشخص می‌کند.
 
----
-
-📊 Current Status
-
-وضعیت| معنی
-✅ Completed| پیاده‌سازی شده و قابل استفاده است
-🟡 In Progress| بخشی از قابلیت پیاده‌سازی شده
-⬜ Planned| در برنامه‌ی توسعه قرار دارد
+> **وضعیت این Roadmap بر اساس بررسی مستقیم Repository و کد فعلی پروژه تنظیم شده است، نه صرفاً بر اساس حدس یا نسخه‌ی قبلی Roadmap.**
 
 ---
 
-🚀 Phase 1 — Core Routing
+## 📊 Current Status
+
+| وضعیت | معنی |
+|---|---|
+| ✅ Completed | پیاده‌سازی شده و قابل استفاده است |
+| 🟡 In Progress | بخشی از قابلیت پیاده‌سازی شده است |
+| ⬜ Planned | هنوز در برنامه‌ی توسعه قرار دارد |
+
+---
+
+## 🚀 Phase 1 — Core Telegram Routing
 
 «هسته‌ی اصلی Router»
 
-Feature| Status
-Laravel Composer Package| ✅
-GitHub Repository| ✅
-Packagist| ✅
-Telegram Webhook| ✅
-Telegram Polling| ✅
-"routes/bot.php"| ✅
-Command Routing| ✅
-Text Routing| ✅
-Callback Query Routing| ✅
-Closure Handlers| ✅
-Controller + Method Handlers| ✅
-Laravel Service Container Resolution| ✅
-Dependency Injection| ✅
-Regular Expression Matching| ✅
-Route Parameters| ✅
-Route Constraints| ✅
-Command Arguments| ✅
-"TelegramUpdate" Wrapper| ✅
-Route Matching Engine| ✅
-Fallback Routes| ✅
-Invalid Update Handling| ✅
+| Feature | Status |
+|---|---|
+| Laravel Composer Package | ✅ |
+| GitHub Repository | ✅ |
+| Packagist | ✅ |
+| Telegram Webhook | ✅ |
+| Telegram Polling | ✅ |
+| `routes/bot.php` | ✅ |
+| `BOT::onCommand()` | ✅ |
+| `BOT::onText()` | ✅ |
+| `BOT::onCallbackQuery()` | ✅ |
+| Closure Handlers | ✅ |
+| Controller + Method Handlers | ✅ |
+| Laravel Service Container Resolution | ✅ |
+| Dependency Injection | ✅ |
+| Regular Expression Matching for Text Routes | ✅ |
+| Route Parameters | ✅ |
+| Route Constraints | ✅ |
+| Command Arguments | ✅ |
+| `TelegramUpdate` Wrapper | ✅ |
+| Route Matching Engine | ✅ |
+| Fallback Routes | ✅ |
+| Invalid Update Handling | ✅ |
 
 ---
 
-🛡️ Phase 2 — Middleware
+## 🛡️ Phase 2 — Middleware
 
 «Laravel-style middleware pipeline for Telegram updates.»
 
-Feature| Status
-Middleware Pipeline| ✅
-Route Middleware| ✅
-Global Telegram Middleware| ✅
-Middleware Object Resolution| ✅
-Laravel Container Resolution| ✅
-Middleware Short-Circuit| ✅
-Middleware Execution Order| ✅
-"TelegramMiddlewareInterface"| ✅
-Middleware Groups| ✅
-Nested Middleware Groups| ✅
-Middleware Parameters| ✅
-Named Middleware Aliases| ✅
-Middleware Configuration| ✅
+| Feature | Status |
+|---|---|
+| Middleware Pipeline | ✅ |
+| Route Middleware | ✅ |
+| Global Telegram Middleware | ✅ |
+| Middleware Object Resolution | ✅ |
+| Laravel Container Resolution | ✅ |
+| Middleware Short-Circuit | ✅ |
+| Middleware Execution Order | ✅ |
+| `TelegramMiddlewareInterface` | ✅ |
+| Middleware Groups | ✅ |
+| Nested Middleware Groups | ✅ |
+| Middleware Parameters | ✅ |
+| Named Middleware Aliases | ✅ |
+| Middleware Configuration | ✅ |
 
 ---
 
-💬 Phase 3 — Conversation & State
+## 💬 Phase 3 — Conversation & State
 
 «Build multi-step Telegram conversations.»
 
-Feature| Status
-Per-user Conversation State| ✅
-Conversation Steps| ✅
-Wait for Next Message| ✅
-Save Current Step| ✅
-Move to Next Step| ✅
-Finish Conversation| ✅
-Conversation Timeout| ✅
-Conversation Data| ✅
-Laravel Cache Storage| ✅
-Closure Conversation Steps| ✅
-Controller Conversation Steps| ✅
-Cancel Conversation API| ⬜
-Input Validation Helpers| ⬜
-Explicit Conversation Middleware| ⬜
-Conversation Events| ⬜
-Additional Storage Drivers| ⬜
+| Feature | Status |
+|---|---|
+| Per-user Conversation State | ✅ |
+| Conversation Steps | ✅ |
+| Wait for Next Message | ✅ |
+| Save Current Step | ✅ |
+| Move to Next Step | ✅ |
+| Finish Conversation | ✅ |
+| Conversation Timeout | ✅ |
+| Conversation Data | ✅ |
+| Laravel Cache Storage | ✅ |
+| Closure Conversation Steps | ✅ |
+| Controller Conversation Steps | ✅ |
+| Cancel Conversation API | ⬜ |
+| Input Validation Helpers | ⬜ |
+| Explicit Conversation Middleware | ⬜ |
+| Conversation Events | ⬜ |
+| Additional Storage Drivers | ⬜ |
 
 ---
 
-⚠️ Phase 4 — Exception & Error Handling
+## ⚠️ Phase 4 — Exception & Error Handling
 
 «Reliable error handling for production Telegram bots.»
 
-Feature| Status
-Telegram Route Exceptions| ⬜
-Invalid Update Exceptions| ⬜
-Telegram API Exceptions| ⬜
-Configurable Exception Handler| ⬜
-Safe Logging| ⬜
-Sensitive Data Protection| ⬜
-Never Expose Bot Tokens in Logs| ⬜
+| Feature | Status |
+|---|---|
+| Telegram Route Exceptions | ✅ |
+| Invalid Update Exceptions | ✅ |
+| Telegram API Exceptions | ✅ |
+| Configurable Exception Handler | ✅ |
+| Safe Logging | ✅ |
+| Sensitive Data Protection | ✅ |
+| Never Expose Bot Tokens in Logs | ✅ |
 
 ---
 
-📡 Phase 5 — Events
+## 📡 Phase 5 — Events
 
 «Laravel-style events for Telegram applications.»
 
-Event| Status
-Update Received| ⬜
-Message Received| ⬜
-Command Received| ⬜
-Callback Query Received| ⬜
-Conversation Started| ⬜
-Conversation Step| ⬜
-Conversation Finished| ⬜
-Route Matched| ⬜
+| Event | Status |
+|---|---|
+| Update Received | ✅ |
+| Message Received | ✅ |
+| Command Received | ✅ |
+| Callback Query Received | ✅ |
+| Conversation Started | ✅ |
+| Conversation Step | ✅ |
+| Conversation Finished | ✅ |
+| Route Matched | ✅ |
 
 ---
 
-🚦 Phase 6 — Rate Limiting
+## 🚦 Phase 6 — Rate Limiting
 
 «Protect bots and Telegram API usage.»
 
-Feature| Status
-Per-user Rate Limit| ⬜
-Per-chat Rate Limit| ⬜
-Per-command Rate Limit| ⬜
-Configurable Limits| ⬜
-Laravel Cache Integration| ⬜
-Outgoing Telegram Rate Limiter| ⬜
+| Feature | Status |
+|---|---|
+| Per-user Rate Limit | ✅ |
+| Per-chat Rate Limit | ✅ |
+| Per-command Rate Limit | ✅ |
+| Configurable Limits | ✅ |
+| Laravel Cache / RateLimiter Integration | ✅ |
+| Outgoing Telegram Rate Limiter | ⬜ |
 
 ---
 
-🧭 Phase 7 — Telegram Route Management
+## 🧭 Phase 7 — Telegram Route Management
 
 «Make Telegram routes feel like native Laravel routes.»
 
-Route List
+### Route List
 
-php artisan telegram:route:list
+```bash
+php artisan reyhan:route-list
+```
 
-Status: ⬜
+Status: **✅**
 
-Named Routes
+### Named Telegram Routes
 
+```php
 BOT::onCommand('start', [StartController::class, 'index'])
     ->name('telegram.start');
+```
 
-Status: ⬜
+Status: **✅**
 
-Route Cache
+### Telegram Route Cache
 
+```bash
 php artisan telegram:route:cache
-
 php artisan telegram:route:clear
+```
 
-Status: ⬜
-
----
-
-📨 Phase 8 — Telegram Update Types
-
-«Expand routing beyond messages and callbacks.»
-
-Update Type| Status
-Inline Query| ⬜
-Edited Message| ⬜
-Channel Post| ⬜
-Edited Channel Post| ⬜
-Chat Member| ⬜
-My Chat Member| ⬜
-Chat Join Request| ⬜
+Status: **✅**
 
 ---
 
-🔘 Phase 9 — Advanced Callback Routing
+## 📨 Phase 8 — More Telegram Update Types
+
+«Expand routing beyond normal messages and callback queries.»
+
+| Update Type | Status |
+|---|---|
+| Inline Query | ✅ |
+| Edited Message | ✅ |
+| Channel Post | ✅ |
+| Edited Channel Post | ✅ |
+| Chat Member | ✅ |
+| My Chat Member | ✅ |
+| Chat Join Request | ✅ |
+
+---
+
+## 🔘 Phase 9 — Better Callback Query Routing
 
 «More powerful callback query routing.»
 
-Feature| Status
-Exact Callback Data Matching| ⬜
-Regex Callback Matching| ⬜
-Callback Route Parameters| ⬜
-Named Callback Routes| ⬜
-Inline Keyboard Integration| ⬜
+| Feature | Status |
+|---|---|
+| Exact Callback Data Matching | ✅ |
+| Regex Callback Matching | ⬜ |
+| Callback Route Parameters | ✅ |
+| Named Callback Routes | ✅ |
+| Inline Keyboard Integration | ✅ |
+
+> Regex matching برای Callback Query در Repository صراحتاً هنوز پیاده‌سازی نشده است. Regex همچنان برای Text Routes در دسترس است.
 
 ---
 
-👤 Phase 10 — User & Chat Conditions
+## 👤 Phase 10 — User & Chat Conditions
 
 «Control who can access Telegram routes.»
 
-Feature| Status
-Admin-only Routes| ⬜
-User Conditions| ⬜
-Private Chat Conditions| ⬜
-Group Chat Conditions| ⬜
-Channel Conditions| ⬜
-User Permission Checks| ⬜
-Chat Type Constraints| ⬜
+| Feature | Status |
+|---|---|
+| Admin-only Routes | ✅ |
+| User Conditions | ✅ |
+| Private Chat Conditions | ✅ |
+| Group Chat Conditions | ✅ |
+| Channel Conditions | ✅ |
+| User Permission Checks | ✅ |
+| Chat Type Constraints | ✅ |
+
+نمونه APIهای فعلی:
+
+```php
+BOT::onCommand('admin', [AdminController::class, 'panel'])
+    ->adminOnly();
+
+BOT::onCommand('test', [TestController::class, 'handle'])
+    ->whereUser(123456789);
+
+BOT::onCommand('checkout', [OrderController::class, 'checkout'])
+    ->privateChat();
+
+BOT::onCommand('delete', [AdminController::class, 'delete'])
+    ->userPermission('can_delete_messages');
+```
 
 ---
 
-🧠 Phase 11 — Bot Context
+## 🧠 Phase 11 — Bot Context
 
 «Provide a unified context for every Telegram update.»
 
@@ -223,23 +258,23 @@ Status: ⬜
 
 ---
 
-💬 Phase 12 — Telegram Response API
+## 💬 Phase 12 — Telegram Response API
 
 «Simplify sending Telegram responses from routes and controllers.»
 
 Planned API:
 
+```php
 return TelegramResponse::text('Hello!');
-
 return TelegramResponse::photo($photo);
-
 return TelegramResponse::document($document);
+```
 
 Status: ⬜
 
 ---
 
-⌨️ Phase 13 — Keyboard Builder
+## ⌨️ Phase 13 — Keyboard Builder
 
 «Laravel-friendly keyboard construction.»
 
@@ -257,7 +292,7 @@ Status: ⬜
 
 ---
 
-📄 Phase 14 — Pagination
+## 📄 Phase 14 — Pagination
 
 «Native pagination for Telegram messages and keyboards.»
 
@@ -273,12 +308,13 @@ Status: ⬜
 
 ---
 
-🧙 Phase 15 — Forms & Wizards
+## 🧙 Phase 15 — Forms & Wizards
 
 «Build multi-step Telegram forms easily.»
 
 Example:
 
+```text
 Name
  ↓
 Phone
@@ -288,6 +324,7 @@ Email
 Confirmation
  ↓
 Complete
+```
 
 Planned features:
 
@@ -303,7 +340,7 @@ Status: ⬜
 
 ---
 
-🧩 Phase 16 — Telegram UI Components
+## 🧩 Phase 16 — Telegram UI Components
 
 «Reusable UI components for Telegram bots.»
 
@@ -322,7 +359,7 @@ Status: ⬜
 
 ---
 
-📁 Phase 17 — Media API
+## 📁 Phase 17 — Media API
 
 «Unified API for Telegram media.»
 
@@ -342,7 +379,7 @@ Status: ⬜
 
 ---
 
-👥 Phase 18 — User & Chat Abstraction
+## 👥 Phase 18 — User & Chat Abstraction
 
 «Application-level abstractions for Telegram users and chats.»
 
@@ -360,15 +397,16 @@ Status: ⬜
 
 ---
 
-🔗 Phase 19 — Deep Links
+## 🔗 Phase 19 — Deep Links
 
 «Support Telegram deep linking.»
 
 Examples:
 
+```text
 /start referral_123
-
 https://t.me/example_bot?start=referral_123
+```
 
 Planned features:
 
@@ -381,7 +419,7 @@ Status: ⬜
 
 ---
 
-🌐 Phase 20 — Telegram WebApp
+## 🌐 Phase 20 — Telegram WebApp
 
 «Build Telegram Mini Apps / Web Apps with Laravel.»
 
@@ -397,7 +435,7 @@ Status: ⬜
 
 ---
 
-💳 Phase 21 — Payments
+## 💳 Phase 21 — Payments
 
 «Simplify Telegram payment workflows.»
 
@@ -414,7 +452,7 @@ Status: ⬜
 
 ---
 
-📢 Phase 22 — Broadcast System
+## 📢 Phase 22 — Broadcast System
 
 «Build scalable Telegram notification systems.»
 
@@ -433,7 +471,7 @@ Status: ⬜
 
 ---
 
-👮 Phase 23 — Admin & Permission System
+## 👮 Phase 23 — Admin & Permission System
 
 «Build powerful Telegram administration tools.»
 
@@ -450,7 +488,7 @@ Status: ⬜
 
 ---
 
-🛡️ Phase 24 — Group Moderation
+## 🛡️ Phase 24 — Group Moderation
 
 «Tools for building Telegram group administration bots.»
 
@@ -469,12 +507,13 @@ Status: ⬜
 
 ---
 
-🤖 Phase 25 — Auto Moderation
+## 🤖 Phase 25 — Auto Moderation
 
 «Rule-based Telegram moderation engine.»
 
 Example:
 
+```text
 Message
    ↓
 Moderation Rules
@@ -482,6 +521,7 @@ Moderation Rules
 Spam?
    ├── Yes → Action
    └── No  → Continue
+```
 
 Planned features:
 
@@ -496,7 +536,7 @@ Status: ⬜
 
 ---
 
-🧵 Phase 26 — Topics & Forums
+## 🧵 Phase 26 — Topics & Forums
 
 «Support Telegram forum groups and topics.»
 
@@ -512,35 +552,26 @@ Status: ⬜
 
 ---
 
-🔄 Phase 27 — Queue Integration
+## 🔄 Phase 27 — Queue Integration
 
 «Process Telegram updates and heavy tasks asynchronously.»
 
-Planned features:
+Planned features beyond the current queue core:
 
-- Queue update processing
-- Queue message sending
-- Heavy task processing
-- Laravel Queue integration
-- Retry handling
-- Failed jobs
+- Queue update processing | **Already implemented in core**
+- Queue message sending | **Already implemented in core**
+- Heavy task processing | **Already supported through queued routes/jobs**
+- Laravel Queue integration | **Already implemented in core**
+- Retry handling | ⬜
+- Failed jobs | ⬜
 
-Status: ⬜
+Overall Status: **🟡 In Progress**
 
 ---
 
-🤖 Phase 28 — Multi-Bot
+## 🤖 Phase 28 — Multi-Bot
 
 «Run multiple Telegram bots inside one Laravel application.»
-
-Example:
-
-Laravel Application
-│
-├── Bot A
-├── Bot B
-├── Bot C
-└── Bot D
 
 Planned features:
 
@@ -555,7 +586,7 @@ Status: ⬜
 
 ---
 
-🧩 Phase 29 — Plugin / Module Architecture
+## 🧩 Phase 29 — Plugin / Module Architecture
 
 «Allow developers to extend the router without modifying the core.»
 
@@ -573,21 +604,17 @@ Status: ⬜
 
 ---
 
-🧪 Phase 30 — Testing & Fake Telegram
+## 🧪 Phase 30 — Testing & Fake Telegram
 
 «First-class testing tools for Telegram bots.»
 
 Planned API:
 
+```php
 Telegram::fake();
-
-Example:
-
-Telegram::fake();
-
 Telegram::sendMessage(...);
-
 Telegram::assertMessageSent(...);
+```
 
 Planned features:
 
@@ -603,7 +630,7 @@ Status: ⬜
 
 ---
 
-🔍 Phase 31 — Debug & Inspector
+## 🔍 Phase 31 — Debug & Inspector
 
 «Developer tools for debugging Telegram bots.»
 
@@ -622,13 +649,15 @@ Status: ⬜
 
 ---
 
-🩺 Phase 32 — Telegram Doctor
+## 🩺 Phase 32 — Telegram Doctor
 
 «Diagnose common configuration problems.»
 
 Example:
 
+```bash
 php artisan telegram:doctor
+```
 
 Potential checks:
 
@@ -646,7 +675,7 @@ Status: ⬜
 
 ---
 
-🔐 Phase 33 — Security
+## 🔐 Phase 33 — Security
 
 «Security-first Telegram bot development.»
 
@@ -665,7 +694,7 @@ Status: ⬜
 
 ---
 
-🔄 Phase 34 — CI/CD & Compatibility
+## 🔄 Phase 34 — CI/CD & Compatibility
 
 «Maintain compatibility across supported Laravel and PHP versions.»
 
@@ -684,53 +713,37 @@ Status: ⬜
 
 ---
 
-📚 Phase 35 — Documentation
+## 📚 Phase 35 — Documentation
 
 «Professional documentation for developers.»
 
-Documentation Website
-
-Status: ⬜
-
-English Documentation
-
-Status: ⬜
-
-Persian Documentation
-
-Status: ⬜
-
-API Reference
-
-Status: ⬜
-
-Guides
-
-Planned guides:
-
-- Installation
-- Configuration
-- Webhook
-- Polling
-- Routing
-- Controllers
-- Middleware
-- Conversations
-- Callbacks
-- Queues
-- Testing
-- Deployment
-- Security
-
-Status: ⬜
+| Documentation | Status |
+|---|---|
+| Documentation Website | ⬜ |
+| English Documentation | ⬜ |
+| Persian Documentation | ⬜ |
+| API Reference | ⬜ |
+| Installation Guide | ⬜ |
+| Configuration Guide | ⬜ |
+| Webhook Guide | ⬜ |
+| Polling Guide | ⬜ |
+| Routing Guide | ⬜ |
+| Controllers Guide | ⬜ |
+| Middleware Guide | ⬜ |
+| Conversations Guide | ⬜ |
+| Callbacks Guide | ⬜ |
+| Queues Guide | ⬜ |
+| Testing Guide | ⬜ |
+| Deployment Guide | ⬜ |
+| Security Guide | ⬜ |
 
 ---
 
-🛒 Phase 36 — Example Applications
+## 🛒 Phase 36 — Example Applications
 
 «Provide real-world examples.»
 
-Shop Bot
+### Shop Bot
 
 Status: ⬜
 
@@ -744,7 +757,7 @@ Potential features:
 - User accounts
 - Pagination
 
-Group Admin Bot
+### Group Admin Bot
 
 Status: ⬜
 
@@ -756,7 +769,7 @@ Potential features:
 - Anti-spam
 - Logs
 
-All-in-One Bot
+### All-in-One Bot
 
 Status: ⬜
 
@@ -772,13 +785,13 @@ Demonstrates:
 - Admin tools
 - WebApp
 
-Demo Bot
+### Demo Bot
 
 Status: ⬜
 
 ---
 
-🤖 Phase 37 — AI-Friendly Documentation
+## 🤖 Phase 37 — AI-Friendly Documentation
 
 «Make the project easy for AI assistants and search engines to understand.»
 
@@ -787,8 +800,8 @@ Planned:
 - Structured documentation
 - Clear API reference
 - Machine-readable examples
-- "llms.txt"
-- "llms-full.txt"
+- `llms.txt`
+- `llms-full.txt`
 - AI-friendly documentation pages
 - Accurate package metadata
 - GitHub examples
@@ -797,7 +810,7 @@ Status: ⬜
 
 ---
 
-🌍 Phase 38 — Community & Ecosystem
+## 🌍 Phase 38 — Community & Ecosystem
 
 «Build a real developer community around the project.»
 
@@ -820,7 +833,7 @@ Status: ⬜
 
 ---
 
-📈 Phase 39 — SEO & Global Discovery
+## 📈 Phase 39 — SEO & Global Discovery
 
 «Make ReyhanTeam discoverable by Laravel and Telegram developers worldwide.»
 
@@ -847,110 +860,55 @@ Status: ⬜
 
 ---
 
-🏗️ Phase 40 — ReyhanTeam Ecosystem
+## 🏗️ Phase 40 — ReyhanTeam Ecosystem
 
 «Build a complete ecosystem around Telegram development with Laravel.»
 
 Long-term vision:
 
+```text
                     ReyhanTeam
                          │
         ┌────────────────┼────────────────┐
         │                │                │
-      Router           Docs           Examples
+   Telegram Router   Documentation    Developer Tools
         │                │                │
-        ├────────────┐   │   ┌────────────┤
-        │            │   │   │            │
-     Testing       Queue │  Shop        Admin
-        │            │   │   │            │
-        └────────────┴───┴───┴────────────┘
-                         │
-                    Community
+        ├── Routing     ├── Guides      ├── Testing
+        ├── Middleware ├── API Docs    ├── Inspector
+        ├── Events     ├── Examples    └── Doctor
+        ├── Queue      └── AI Docs
+        └── Conversations
+```
 
 Status: ⬜
 
 ---
 
-🎯 Priority Roadmap
+## 🎯 Development Priority
 
-برای جلوگیری از پراکندگی توسعه، اولویت پیشنهادی:
+برای توسعه‌ی بعدی، پیشنهاد می‌شود ابتدا قابلیت‌های زیر تکمیل شوند:
 
-Priority| Phase| Goal
-🔴 P0| Core Routing| تکمیل هسته Router
-🔴 P0| Exception Handling| پایداری و امنیت
-🔴 P0| Testing| جلوگیری از Regression
-🔴 P0| Events| معماری Event-driven
-🔴 P1| Rate Limiting| کنترل درخواست‌ها
-🔴 P1| Queue| پردازش Async
-🔴 P1| Update Types| پوشش کامل Telegram Updates
-🔴 P1| Bot Context| تجربه توسعه بهتر
-🟠 P1| Response API| ساده‌سازی پاسخ‌ها
-🟠 P1| Keyboard Builder| ساخت UI بهتر
-🟠 P1| Pagination| UI کاربردی
-🟠 P1| Admin/Permissions| ربات‌های مدیریتی
-🟠 P1| Testing/Fake| تجربه تست حرفه‌ای
-🟡 P2| WebApp| Telegram Mini Apps
-🟡 P2| Payments| فروشگاه و پرداخت
-🟡 P2| Broadcast| سیستم اطلاع‌رسانی
-🟡 P2| Multi-Bot| پروژه‌های بزرگ
-🟡 P2| Plugin System| اکوسیستم
-🟡 P2| Debug/Inspector| Developer Experience
-🟢 P3| Documentation| رشد پروژه
-🟢 P3| Examples| Adoption
-🟢 P3| AI-friendly Docs| Discovery
-🟢 P3| Community| Ecosystem
-🟢 P3| SEO| Global Reach
+1. Regex Callback Matching
+2. تکمیل Queue با Retry و Failed Jobs
+3. Testing & Fake Telegram
+4. Bot Context
+5. Telegram Response API
+6. Keyboard Builder
+7. Pagination
+8. Forms & Wizards
+9. Admin & Permission System پیشرفته
+10. Group Moderation
+11. Broadcast System
+12. Multi-Bot
+13. Documentation Website
+14. AI-Friendly Documentation
 
 ---
 
-🏁 Vision
+## 🏁 Final Vision
 
-هدف نهایی "ReyhanTeam/laravel-telegram-bot-router" فقط ساخت یک Telegram Router نیست.
+هدف نهایی `ReyhanTeam/laravel-telegram-bot-router` فقط ساخت یک Telegram Router نیست.
 
-هدف این است که توسعه‌دهنده‌ی Laravel بتواند یک Telegram Bot را با همان تجربه‌ای که از Laravel دارد، بسازد:
+هدف این است که توسعه‌دهنده‌ی Laravel بتواند تقریباً تمام منطق یک Telegram Bot را با همان فلسفه‌ای که در Laravel برای Routing، Middleware، Controller، Event، Queue و Service Container دارد، به شکلی تمیز، قابل توسعه و استاندارد مدیریت کند.
 
-BOT::onCommand('start', [StartController::class, 'index']);
-
-BOT::onText('hello', [MessageController::class, 'hello']);
-
-BOT::onCallbackQuery('profile', [ProfileController::class, 'show']);
-
-و در مراحل بعد:
-
-Routing
-   ↓
-Middleware
-   ↓
-Conversation
-   ↓
-Validation
-   ↓
-Response
-   ↓
-Keyboard
-   ↓
-Queue
-   ↓
-Events
-   ↓
-Testing
-   ↓
-Production
-
-همه‌ی این بخش‌ها باید در یک تجربه‌ی یکپارچه و Laravel-native قرار بگیرند.
-
----
-
-⭐ Contributing
-
-پیشنهادها، Bug Reportها، Feature Requestها و Pull Requestها از طرف جامعه‌ی توسعه‌دهندگان استقبال می‌شوند.
-
-قبل از مشارکت، مستندات Contribution Guide و قوانین پروژه را بررسی کنید.
-
----
-
-📌 Roadmap Status
-
-این Roadmap یک برنامه‌ی زنده است و با توسعه‌ی پروژه ممکن است تغییر کند.
-
-«ReyhanTeam — Building a better Laravel experience for Telegram bots.»
+> **ReyhanTeam — Building a better Laravel experience for Telegram bots.**
