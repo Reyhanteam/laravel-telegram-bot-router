@@ -2,6 +2,7 @@
 
 namespace ReyhanTeam\TelegramBotRouter;
 
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use ReyhanTeam\TelegramBotRouter\Console\SetPostRouteCommand;
@@ -9,6 +10,7 @@ use ReyhanTeam\TelegramBotRouter\Console\StartPollingCommand;
 use ReyhanTeam\TelegramBotRouter\Console\Commands\TelegramRouteCacheCommand;
 use ReyhanTeam\TelegramBotRouter\Console\Commands\TelegramRouteClearCommand;
 use ReyhanTeam\TelegramBotRouter\Console\Commands\TelegramRouteListCommand;
+use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
 use ReyhanTeam\TelegramBotRouter\Core\UpdateManager;
 
 class TelegramRouterServiceProvider extends ServiceProvider
@@ -24,7 +26,16 @@ class TelegramRouterServiceProvider extends ServiceProvider
             return new TelegramRouter();
         });
 
+        $this->app->singleton(TelegramApiClient::class, function () {
+            return new TelegramApiClient(
+                new Client(),
+                (string) config('telegram-bot-router.token', ''),
+                (string) config('telegram-bot-router.polling.api_url', 'https://api.telegram.org'),
+            );
+        });
+
         $this->app->alias(TelegramRouter::class, 'telegram.router');
+        $this->app->alias(TelegramApiClient::class, 'telegram.api');
 
         $this->commands([
             StartPollingCommand::class,
