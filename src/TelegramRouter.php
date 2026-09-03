@@ -59,7 +59,14 @@ class TelegramRouter
         }
 
         if ($onInvalid = TelegramBot::getOnInvalid()) { $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update); return; }
-        Log::info('No matching route found', ['update_type' => $this->getUpdateType($update)]);
+
+        // Telegram legitimately emits message updates for service events such as
+        // pinning a message. These are valid updates, not routing errors, so keep
+        // them out of the normal info-level log noise when no route is registered.
+        Log::debug('No matching Telegram route found', [
+            'update_type' => $this->getUpdateType($update),
+            'update_id' => $update->update_id ?? null,
+        ]);
     }
 
     protected function setMatchState(array $route, TelegramUpdate $update): void
@@ -159,12 +166,26 @@ class TelegramRouter
         } catch (TelegramRouteException $e) { throw $e; } catch (Throwable $e) { throw new TelegramRouteException('Telegram route execution failed for [' . ($route['pattern'] ?? 'fallback') . ']: ' . $e->getMessage(), $route['pattern'] ?? null, $route['callback'] ?? null, $e); }
     }
 
-    public function processQueuedRoute(TelegramUpdate $update, array $route): void { TelegramBot::setApplication(app()); $this->resolveAction($route['callback'], $update); }
-    protected function resolveAction($action, TelegramUpdate $update) { if ($action instanceof \Closure) return $action($update, $update->commandArguments(), ...array_values($update->routeParameters)); if (is_array($action) && count($action) === 2) { [$controller, $method] = $action; if (!is_string($controller) || !class_exists($controller)) throw new \InvalidArgumentException("Telegram route controller [{$controller}] was not found. Check routes/bot.php."); if (!is_string($method) || !method_exists($controller, $method)) throw new \InvalidArgumentException("Telegram route method [{$method}] was not found on [{$controller}]."); $instance = app()->make($controller); $parameters = ['update' => $update, 'arguments' => $update->commandArguments()]; foreach ($update->routeParameters as $name => $value) $parameters[$name] = $value; return app()->call([$instance, $method], $parameters); } throw new \InvalidArgumentException('Invalid Telegram route action provided.'); }
+    protected function resolveAction($callback, TelegramUpdate $update): mixed
+    {
+        if (is_string($callback) && str_contains($callback, '@')) { [$class, $method] = explode('@', $callback, 2); return app($class)->{$method}($update); }
+        if (is_array($callback) && count($callback) === 2) { [$class, $method] = $callback; $instance = is_object($class) ? $class : app($class); return $instance->{$method}($update); }
+        if (is_callable($callback)) return $callback($update);
+        throw new \InvalidArgumentException('Invalid Telegram route action provided.');
+    }
 
     protected function getUpdateType(TelegramUpdate $update): string
     {
-        foreach (['inline_query','edited_message','channel_post','edited_channel_post','chat_member','my_chat_member','chat_join_request','callback_query','message'] as $type) { if (isset($update->{$type})) { if ($type === 'message' && isset($update->message->text)) return str_starts_with((string) $update->message->text, '/') ? 'command' : 'text'; return $type; } }
+        foreach ([
+            'message', 'edited_message', 'channel_post', 'edited_channel_post', 'business_connection',
+            'business_message', 'edited_business_message', 'deleted_business_messages', 'callback_query',
+            'inline_query', 'chosen_inline_result', 'shipping_query', 'pre_checkout_query', 'purchased_paid_media',
+            'my_chat_member', 'chat_member', 'chat_join_request', 'chat_boost', 'removed_chat_boost', 'message_reaction',
+            'message_reaction_count', 'poll', 'poll_answer', 'removed_chat_boost', 'boost_removed',
+        ] as $type) {
+            if (isset($update->{$type})) return $type;
+        }
+
         return 'unknown';
     }
 }
