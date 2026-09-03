@@ -1,0 +1,93 @@
+name: Commit Telegram API 169
+
+on:
+  push:
+    branches:
+      - feature/telegram-api-169
+
+permissions:
+  contents: write
+
+jobs:
+  commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Integrate and validate
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          trait = Path('src/Facades/TelegramApiAdditionalMethods.php').read_text()
+          bot = Path('src/Facades/BOT.php')
+          text = bot.read_text()
+          if 'use TelegramApiAdditionalMethods;' not in text:
+              text = text.replace('final class BOT extends Facade\n{', 'final class BOT extends Facade\n{\n    use TelegramApiAdditionalMethods;')
+              bot.write_text(text)
+
+          names = re.findall(r'public static function\s+([A-Za-z0-9_]+)\s*\(', trait)
+          if len(names) != 69:
+              raise SystemExit(f'Expected 69 additional methods, found {len(names)}')
+
+          def snake(name):
+              return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+
+          defs = []
+          for name in names:
+              match = re.search(r'public static function\s+' + re.escape(name) + r'\((.*?)\):', trait)
+              params = match.group(1).strip() if match else ''
+              required, optional = [], []
+              if params:
+                  for part in re.split(r',\s*', params):
+                      m = re.search(r'\$([A-Za-z_][A-Za-z0-9_]*)(?:\s*=\s*null)?\s*$', part.strip())
+                      if not m:
+                          continue
+                      p = snake(m.group(1))
+                      if re.search(r'\s=\s*null\s*$', part.strip()):
+                          optional.append(p)
+                      else:
+                          required.append(p)
+              defs.append(f"        '{name}' => ['required' => {required!r}, 'optional' => {optional!r}],\n")
+
+          registry = Path('src/Core/TelegramApiMethodRegistry.php')
+          r = registry.read_text()
+          if "'getUpdates'," not in r:
+              lines = r.splitlines(True)
+              for i, line in enumerate(lines):
+                  if "'verifyUser'," in line:
+                      lines.insert(i, ''.join(f"        '{n}',\n" for n in names))
+                      break
+              else:
+                  raise SystemExit('verifyUser method marker not found')
+              r = ''.join(lines)
+
+          if "'getUpdates' =>" not in r:
+              lines = r.splitlines(True)
+              for i, line in enumerate(lines):
+                  if "'verifyUser' =>" in line:
+                      lines.insert(i, ''.join(defs))
+                      break
+              else:
+                  raise SystemExit('verifyUser definition marker not found')
+              r = ''.join(lines)
+          registry.write_text(r)
+
+          bot_text = bot.read_text()
+          static_count = len(re.findall(r'public static function\s+([A-Za-z0-9_]+)\s*\(', bot_text)) + len(names)
+          if static_count != 169:
+              raise SystemExit(f'Expected 169 facade methods, found {static_count}')
+          print('OK: 169 static facade methods; 69 registry additions')
+          PY
+          php -l src/Facades/BOT.php
+          php -l src/Facades/TelegramApiAdditionalMethods.php
+          php -l src/Core/TelegramApiMethodRegistry.php
+      - name: Commit generated changes and remove temporary workflows
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/Facades/BOT.php src/Facades/TelegramApiAdditionalMethods.php src/Core/TelegramApiMethodRegistry.php
+          git rm .github/workflows/complete-telegram-api-169.yml .github/workflows/finalize-telegram-api-169.yml .github/workflows/commit-telegram-api-169.yml
+          git commit -m "feat: expose all 169 Telegram Bot API facade methods"
+          git push
