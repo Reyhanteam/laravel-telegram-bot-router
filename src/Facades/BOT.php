@@ -20,6 +20,7 @@ use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
  */
 final class BOT extends Facade
 {
+    use TelegramApiAdditionalMethods;
     protected static function getFacadeAccessor(): string
     {
         return TelegramApiClient::class;
