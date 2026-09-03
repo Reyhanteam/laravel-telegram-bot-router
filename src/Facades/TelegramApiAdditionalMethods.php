@@ -39,6 +39,12 @@ trait TelegramApiAdditionalMethods
     public static function deleteEphemeralMessage(int|string $chatId, int $receiverUserId, int $ephemeralMessageId): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function deleteMessageReaction(int|string $chatId, int $messageId, ?int $userId = null, ?int $actorChatId = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function deleteAllMessageReactions(int|string $chatId, ?int $userId = null, ?int $actorChatId = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+
+    public static function editEphemeralMessageText(int|string $chatId, int $receiverUserId, int $ephemeralMessageId, ?string $text = null, ?string $parseMode = null, ?array $entities = null, ?array $richMessage = null, ?array $linkPreviewOptions = null, ?array $replyMarkup = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function editEphemeralMessageMedia(int|string $chatId, int $receiverUserId, int $ephemeralMessageId, array $media, ?array $replyMarkup = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function editEphemeralMessageCaption(int|string $chatId, int $receiverUserId, int $ephemeralMessageId, ?string $caption = null, ?string $parseMode = null, ?array $captionEntities = null, ?bool $showCaptionAboveMedia = null, ?array $replyMarkup = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function editEphemeralMessageReplyMarkup(int|string $chatId, int $receiverUserId, int $ephemeralMessageId, ?array $replyMarkup = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+
     public static function getStickerSet(string $name): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function getCustomEmojiStickers(array $customEmojiIds): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function uploadStickerFile(int $userId, mixed $sticker, string $stickerFormat): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
@@ -65,7 +71,7 @@ trait TelegramApiAdditionalMethods
     public static function getChatGifts(int|string $chatId, ?bool $excludeUnsaved = null, ?bool $excludeSaved = null, ?bool $excludeUnlimited = null, ?bool $excludeLimitedUpgradable = null, ?bool $excludeLimitedNonUpgradable = null, ?bool $excludeFromBlockchain = null, ?bool $excludeUnique = null, ?bool $sortByPrice = null, ?string $offset = null, ?int $limit = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function getBusinessAccountStarBalance(string $businessConnectionId): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function transferBusinessAccountStars(string $businessConnectionId, int $starCount): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
-    public static function getBusinessAccountGifts(string $businessConnectionId, ?bool $excludeUnsaved = null, ?bool $excludeSaved = null, ?bool $excludeUnlimited = null, ?bool $excludeLimitedUpgradable = null, ?bool $excludeLimitedNonUpgradable = null, ?bool $excludeUnique = null, ?bool $excludeFromBlockchain = null, ?bool $sortByPrice = null, ?string $offset = null, ?int $limit = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function getBusinessAccountGifts(string $businessConnectionId, ?bool $excludeUnsaved = null, ?bool $excludeSaved = null, ?bool $excludeUnlimited = null, ?bool $excludeLimitedUpgradable = null, ?bool $excludeLimitedNonUpgradable = null, ?bool $excludeFromBlockchain = null, ?bool $excludeUnique = null, ?bool $sortByPrice = null, ?string $offset = null, ?int $limit = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function setBusinessAccountName(string $businessConnectionId, string $firstName, ?string $lastName = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function setBusinessAccountUsername(string $businessConnectionId, ?string $username = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function setBusinessAccountBio(string $businessConnectionId, ?string $bio = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
@@ -82,4 +88,7 @@ trait TelegramApiAdditionalMethods
     public static function transferGift(string $businessConnectionId, string $ownedGiftId, int $newOwnerChatId, ?int $starCount = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function convertGiftToStars(string $businessConnectionId, string $ownedGiftId): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
     public static function upgradeGift(string $businessConnectionId, string $ownedGiftId, ?bool $keepOriginalDetails = null, ?int $starCount = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function verifyChat(int|string $chatId, ?string $customDescription = null): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function removeUserVerification(int $userId): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
+    public static function removeChatVerification(int|string $chatId): mixed { return static::dispatch(__FUNCTION__, func_get_args()); }
 }
