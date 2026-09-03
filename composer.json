@@ -16,6 +16,7 @@
         "illuminate/support": "^12.0|^13.0",
         "illuminate/routing": "^12.0|^13.0",
         "illuminate/console": "^12.0|^13.0",
+        "guzzlehttp/guzzle": "^7.5.1",
         "irazasyed/telegram-bot-sdk": "^3.15"
     },
     "autoload": {
