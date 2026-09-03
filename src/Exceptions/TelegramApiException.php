@@ -1,17 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ReyhanTeam\TelegramBotRouter\Exceptions;
 
 use RuntimeException;
 
-class TelegramApiException extends RuntimeException
+final class TelegramApiException extends RuntimeException
 {
     public function __construct(
         string $message,
-        public readonly ?int $statusCode = null,
-        public readonly ?string $method = null,
-        public readonly ?int $errorCode = null,
+        private readonly int $errorCode,
+        private readonly array $parameters = [],
+        ?\Throwable $previous = null,
     ) {
-        parent::__construct($message);
+        parent::__construct($message, $errorCode, $previous);
+    }
+
+    public function getTelegramErrorCode(): int
+    {
+        return $this->errorCode;
+    }
+
+    public function getParameters(): array
+    {
+        return $this->parameters;
     }
 }
