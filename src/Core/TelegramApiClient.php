@@ -9,6 +9,13 @@ use GuzzleHttp\Exception\GuzzleException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
 use RuntimeException;
 
+/**
+ * Shared Telegram Bot API HTTP client.
+ *
+ * The method registry is the single source of truth for parameter order and
+ * required/optional metadata. This class only normalizes developer arguments
+ * and sends the request. It does not duplicate HTTP logic per Telegram method.
+ */
 final class TelegramApiClient
 {
     public function __construct(
@@ -60,15 +67,69 @@ final class TelegramApiClient
         return $payload['result'] ?? null;
     }
 
+    /**
+     * Supports both the legacy associative-array API and the ergonomic API:
+     *
+     *     $client->sendMessage($chatId, 'Hello');
+     *     $client->sendMessage($chatId, 'Hello', parseMode: 'HTML');
+     *     $client->sendMessage(['chat_id' => $chatId, 'text' => 'Hello']);
+     */
     public function __call(string $method, array $arguments): mixed
     {
-        $parameters = $arguments[0] ?? [];
-
-        if (!is_array($parameters)) {
-            throw new \InvalidArgumentException(sprintf('Parameters for [%s] must be an associative array.', $method));
+        if (isset($arguments[0]) && is_array($arguments[0]) && $this->isAssociative($arguments[0])) {
+            return $this->call($method, $arguments[0]);
         }
 
-        return $this->call($method, $parameters);
+        return $this->call($method, $this->normalizeDeveloperArguments($method, $arguments));
+    }
+
+    /** @param list<mixed>|array<string, mixed> $arguments */
+    private function normalizeDeveloperArguments(string $method, array $arguments): array
+    {
+        $definition = TelegramApiMethodRegistry::parameters($method);
+        $names = TelegramApiMethodRegistry::parameterNames($method);
+
+        $parameters = [];
+        $position = 0;
+
+        foreach ($arguments as $key => $value) {
+            if (is_string($key)) {
+                $apiName = $this->toApiParameterName($key);
+
+                if (!in_array($apiName, $names, true)) {
+                    throw new \InvalidArgumentException(sprintf('Unknown parameter [%s] for Telegram API method [%s].', $key, $method));
+                }
+
+                $parameters[$apiName] = $value;
+                continue;
+            }
+
+            if (!array_key_exists($position, $names)) {
+                throw new \ArgumentCountError(sprintf('Too many arguments for Telegram API method [%s].', $method));
+            }
+
+            $parameters[$names[$position]] = $value;
+            $position++;
+        }
+
+        foreach ($definition['required'] as $required) {
+            if (!array_key_exists($required, $parameters)) {
+                throw new \ArgumentCountError(sprintf('Missing required parameter [%s] for Telegram API method [%s].', $required, $method));
+            }
+        }
+
+        return array_filter($parameters, static fn ($value): bool => $value !== null);
+    }
+
+    private function toApiParameterName(string $name): string
+    {
+        return strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    }
+
+    /** @param array<mixed> $value */
+    private function isAssociative(array $value): bool
+    {
+        return array_keys($value) !== range(0, count($value) - 1);
     }
 
     /** @return array<string, mixed> */
@@ -87,6 +148,7 @@ final class TelegramApiClient
             if (is_resource($value) || $value instanceof \CURLFile) {
                 return true;
             }
+
             if (is_array($value) && $this->containsUpload($value)) {
                 return true;
             }
@@ -99,8 +161,12 @@ final class TelegramApiClient
     private function toMultipart(array $parameters): array
     {
         $parts = [];
+
         foreach ($parameters as $name => $value) {
-            $parts[] = ['name' => (string) $name, 'contents' => is_array($value) ? json_encode($value, JSON_THROW_ON_ERROR) : $value];
+            $parts[] = [
+                'name' => (string) $name,
+                'contents' => is_array($value) ? json_encode($value, JSON_THROW_ON_ERROR) : $value,
+            ];
         }
 
         return $parts;

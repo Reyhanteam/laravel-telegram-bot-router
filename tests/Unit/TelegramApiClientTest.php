@@ -10,6 +10,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Orchestra\Testbench\TestCase;
 use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
+use ReyhanTeam\TelegramBotRouter\Core\TelegramApiMethodRegistry;
 
 final class TelegramApiClientTest extends TestCase
 {
@@ -104,6 +105,81 @@ final class TelegramApiClientTest extends TestCase
         $this->assertSame('start', $result[0]['command']);
         $this->assertSame('/botTEST_TOKEN/getMyCommands', $this->lastRequestPath());
         $this->assertSame(['language_code' => 'en'], $this->lastRequestBody());
+    }
+
+    public function test_send_message_accepts_positional_arguments_and_named_optional_arguments(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => ['message_id' => 100, 'chat' => ['id' => 123]],
+        ]);
+
+        $result = $client->sendMessage(123, 'Hello', parseMode: 'HTML');
+
+        $this->assertSame(100, $result['message_id']);
+        $this->assertSame('/botTEST_TOKEN/sendMessage', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'text' => 'Hello',
+            'parse_mode' => 'HTML',
+        ], $this->lastRequestBody());
+    }
+
+    public function test_pin_chat_message_accepts_positional_arguments(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->pinChatMessage(-1001234567890, 321);
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/pinChatMessage', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => -1001234567890,
+            'message_id' => 321,
+        ], $this->lastRequestBody());
+    }
+
+    public function test_send_live_photo_requires_both_media_values_in_registry_order(): void
+    {
+        $this->assertSame(
+            ['chat_id', 'live_photo', 'photo'],
+            TelegramApiMethodRegistry::parameters('sendLivePhoto')['required'],
+        );
+    }
+
+    public function test_registry_contains_exactly_the_package_api_methods(): void
+    {
+        $methods = TelegramApiMethodRegistry::methods();
+
+        $this->assertCount(100, $methods);
+        $this->assertCount(100, array_unique($methods));
+
+        foreach ($methods as $method) {
+            $definition = TelegramApiMethodRegistry::parameters($method);
+            $this->assertSame(
+                [...$definition['required'], ...$definition['optional']],
+                TelegramApiMethodRegistry::parameterNames($method),
+            );
+        }
+    }
+
+    public function test_unknown_named_parameter_is_rejected(): void
+    {
+        $client = $this->client(['ok' => true, 'result' => true]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $client->pinChatMessage(123, 456, unknownOption: true);
+    }
+
+    public function test_missing_required_parameter_is_rejected(): void
+    {
+        $client = $this->client(['ok' => true, 'result' => true]);
+
+        $this->expectException(\ArgumentCountError::class);
+        $client->pinChatMessage(123);
     }
 
     /** @param array<string, mixed> $payload */
