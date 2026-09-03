@@ -142,6 +142,95 @@ final class TelegramApiClientTest extends TestCase
         ], $this->lastRequestBody());
     }
 
+    public function test_edit_message_text_maps_positional_arguments_to_correct_api_fields(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->editMessageText(123, 321, 'New text');
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/editMessageText', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'message_id' => 321,
+            'text' => 'New text',
+        ], $this->lastRequestBody());
+    }
+
+    public function test_edit_message_caption_maps_positional_arguments_to_correct_api_fields(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->editMessageCaption(123, 321, 'New caption');
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/editMessageCaption', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'message_id' => 321,
+            'caption' => 'New caption',
+        ], $this->lastRequestBody());
+    }
+
+    public function test_edit_message_reply_markup_maps_positional_arguments_to_correct_api_fields(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $replyMarkup = ['inline_keyboard' => [[['text' => 'OK', 'callback_data' => 'ok']]]];
+        $result = $client->editMessageReplyMarkup(123, 321, null, null, $replyMarkup);
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/editMessageReplyMarkup', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'message_id' => 321,
+            'reply_markup' => $replyMarkup,
+        ], $this->lastRequestBody());
+    }
+
+    public function test_stop_message_live_location_maps_positional_arguments_to_correct_api_fields(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->stopMessageLiveLocation(123, 321);
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/stopMessageLiveLocation', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'message_id' => 321,
+        ], $this->lastRequestBody());
+    }
+
+    public function test_unpin_chat_message_maps_message_id_before_business_connection_id(): void
+    {
+        $client = $this->client([
+            'ok' => true,
+            'result' => true,
+        ]);
+
+        $result = $client->unpinChatMessage(123, 321);
+
+        $this->assertTrue($result);
+        $this->assertSame('/botTEST_TOKEN/unpinChatMessage', $this->lastRequestPath());
+        $this->assertSame([
+            'chat_id' => 123,
+            'message_id' => 321,
+        ], $this->lastRequestBody());
+    }
+
     public function test_send_live_photo_requires_both_media_values_in_registry_order(): void
     {
         $this->assertSame(
