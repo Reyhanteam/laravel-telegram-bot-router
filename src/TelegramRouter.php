@@ -59,7 +59,14 @@ class TelegramRouter
         }
 
         if ($onInvalid = TelegramBot::getOnInvalid()) { $this->execute(['callback' => $onInvalid, 'pattern' => 'onInvalid', 'middleware' => [], 'constraints' => [], 'rate_limits' => [], 'queue' => ['enabled' => false]], $update); return; }
-        Log::info('No matching route found', ['update_type' => $this->getUpdateType($update)]);
+
+        // Telegram legitimately emits message updates for service events such as
+        // pinning a message. These are valid updates, not routing errors, so keep
+        // them out of the normal info-level log noise when no route is registered.
+        Log::debug('No matching Telegram route found', [
+            'update_type' => $this->getUpdateType($update),
+            'update_id' => $update->update_id ?? null,
+        ]);
     }
 
     protected function setMatchState(array $route, TelegramUpdate $update): void
