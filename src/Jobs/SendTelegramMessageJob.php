@@ -2,24 +2,25 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Jobs;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Telegram\Bot\Laravel\Facades\Telegram;
+use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
 
-class SendTelegramMessageJob implements ShouldQueue
+class SendTelegramMessageJob extends TelegramQueueJob
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
     public function __construct(public array $params)
     {
-        $this->onQueue(config('telegram-bot-router.queue.queue', 'default'));
+        $this->configureQueue();
     }
 
-    public function handle(): void
+    public function handle(TelegramApiClient $telegram): void
     {
-        Telegram::sendMessage($this->params);
+        $this->run(fn () => $telegram->call('sendMessage', $this->params));
+    }
+
+    protected function queueContext(): array
+    {
+        return [
+            'chat_id' => $this->params['chat_id'] ?? null,
+            'method' => 'sendMessage',
+        ];
     }
 }

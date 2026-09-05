@@ -29,7 +29,15 @@ return [
 
     'queue' => [
         'updates' => (bool) env('TELEGRAM_QUEUE_UPDATES', false),
+        'connection' => env('TELEGRAM_QUEUE_CONNECTION', null),
         'queue' => env('TELEGRAM_QUEUE_NAME', 'default'),
+        'tries' => (int) env('TELEGRAM_QUEUE_TRIES', 3),
+        'backoff' => array_values(array_filter(array_map('trim', explode(',', env('TELEGRAM_QUEUE_BACKOFF', '10,30,60'))), 'strlen')),
+        'timeout' => (int) env('TELEGRAM_QUEUE_TIMEOUT', 120),
+        'middleware' => [],
+        'deduplicate_updates' => (bool) env('TELEGRAM_QUEUE_DEDUPLICATE_UPDATES', true),
+        'deduplication_ttl' => (int) env('TELEGRAM_QUEUE_DEDUPLICATION_TTL', 86400),
+        'cache_store' => env('TELEGRAM_QUEUE_CACHE_STORE', null),
     ],
 
     'route_cache' => [

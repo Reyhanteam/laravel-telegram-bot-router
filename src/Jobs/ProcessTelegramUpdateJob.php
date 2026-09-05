@@ -2,27 +2,29 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Jobs;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use ReyhanTeam\TelegramBotRouter\TelegramRouter;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
-class ProcessTelegramUpdateJob implements ShouldQueue
+class ProcessTelegramUpdateJob extends TelegramQueueJob
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
     public function __construct(
         public array $update,
         public array $route,
     ) {
-        $this->onQueue(config('telegram-bot-router.queue.queue', 'default'));
+        $this->deduplicationKey = 'telegram-bot-router.queue.update.' . (string) ($update['update_id'] ?? sha1(json_encode($update)));
+        $this->configureQueue();
     }
 
     public function handle(TelegramRouter $router): void
     {
-        $router->processQueuedRoute(TelegramUpdate::fromArray($this->update), $this->route);
+        $this->run(fn () => $router->processQueuedRoute(TelegramUpdate::fromArray($this->update), $this->route));
+    }
+
+    protected function queueContext(): array
+    {
+        return [
+            'update_id' => $this->update['update_id'] ?? null,
+            'route' => $this->route['name'] ?? $this->route['pattern'] ?? null,
+        ];
     }
 }
