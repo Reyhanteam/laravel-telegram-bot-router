@@ -1127,10 +1127,188 @@ php artisan telegram:route:list
 
 ## 🟠 Priority 8 — Queue Support
 
-- [ ] Queue update processing
-- [ ] Queue message sending
-- [ ] Queue heavy bot tasks
-- [ ] Laravel queue integration
+The package uses Laravel's native queue system. This lets the webhook return
+quickly while slower controller work and outgoing messages run in a queue
+worker.
+
+### Features
+
+- [x] Queue update processing
+- [x] Queue message sending
+- [x] Queue heavy bot tasks
+- [x] Laravel queue integration
+- [x] Queue retry handling
+- [x] Configurable retry attempts
+- [x] Retry delay / backoff
+- [x] Failed Telegram jobs
+- [x] Failed job handling
+- [x] Failed job events
+- [x] Queue exception handling
+- [x] Job timeout configuration
+- [x] Job middleware support
+- [x] Prevent duplicate update processing
+- [x] Queue logging
+- [x] Queue configuration
+
+### 1. Configure Laravel Queue
+
+First configure a Laravel queue connection as usual. For a local development
+project, Laravel's database queue is a common option:
+
+```bash
+php artisan queue:table
+php artisan migrate
+```
+
+Then put the following values in the application's `.env` file. These are the
+package Queue settings:
+
+```env
+TELEGRAM_QUEUE_CONNECTION=
+TELEGRAM_QUEUE_NAME=default
+TELEGRAM_QUEUE_TRIES=3
+TELEGRAM_QUEUE_BACKOFF=10,30,60
+TELEGRAM_QUEUE_TIMEOUT=120
+TELEGRAM_QUEUE_DEDUPLICATE_UPDATES=true
+TELEGRAM_QUEUE_DEDUPLICATION_TTL=86400
+TELEGRAM_QUEUE_CACHE_STORE=
+```
+
+`TELEGRAM_QUEUE_CONNECTION` is optional. When it is empty, Laravel uses the
+application's default queue connection. Set it, for example, to `database`,
+`redis`, or another connection configured in `config/queue.php`.
+
+`TELEGRAM_QUEUE_NAME` is the queue listened to by the worker. Run a worker for
+that same queue:
+
+```bash
+php artisan queue:work --queue=default
+```
+
+`TELEGRAM_QUEUE_TRIES=3` means Laravel may attempt a failed Telegram job up to
+three times. `TELEGRAM_QUEUE_BACKOFF=10,30,60` delays those retries by 10, 30,
+and 60 seconds. `TELEGRAM_QUEUE_TIMEOUT=120` gives each attempt 120 seconds to
+finish.
+
+`TELEGRAM_QUEUE_DEDUPLICATE_UPDATES=true` protects a bot from processing the
+same Telegram `update_id` twice. The successful update lock is retained for
+`TELEGRAM_QUEUE_DEDUPLICATION_TTL` seconds. Use a shared cache store such as
+Redis when multiple queue workers or servers are running. Set
+`TELEGRAM_QUEUE_CACHE_STORE` to the name of that Laravel cache store, or leave
+it empty to use the default store.
+
+### 2. Queue Telegram Route Handlers
+
+Queue one route by adding `->queue()` after its handler:
+
+```php
+use ReyhanTeam\TelegramBotRouter\TelegramBot as BOT;
+
+BOT::onCommand('report', [ReportController::class, 'generate'])
+    ->queue();
+```
+
+To use a separate queue for a heavy task, provide the queue name:
+
+```php
+BOT::onCommand('export', [ExportController::class, 'create'])
+    ->queue('telegram-heavy');
+```
+
+Queued route handlers must be controller actions or another serializable
+action. Closures cannot be queued by Laravel and must not be used with
+`->queue()`.
+
+To queue every Telegram route by default, add this to `.env`:
+
+```env
+TELEGRAM_QUEUE_UPDATES=true
+```
+
+Route middleware and rate limits still run before the update is placed on the
+queue. The controller action is executed by the queue worker.
+
+### 3. Queue Outgoing Messages
+
+Use `TelegramQueue::sendMessage()` when sending a message does not need to
+block the current request:
+
+```php
+use ReyhanTeam\TelegramBotRouter\TelegramQueue;
+
+TelegramQueue::sendMessage([
+    'chat_id' => 123456789,
+    'text' => 'Your report is ready.',
+]);
+```
+
+The message job uses this package's `TelegramApiClient`, so it uses the same
+bot token and Telegram API configuration as the rest of the package.
+
+### 4. Handle Failed Telegram Jobs
+
+When an attempt throws an exception, it is logged and Laravel retries it using
+the configured attempts and backoff. Once all attempts are exhausted, Laravel
+runs the job's failure handler, records it through the configured Laravel
+failed-job driver, logs the failure, and dispatches `TelegramJobFailed`.
+
+Listen for the event in a Laravel service provider to notify your team or save
+additional diagnostics:
+
+```php
+use Illuminate\Support\Facades\Event;
+use ReyhanTeam\TelegramBotRouter\Events\TelegramJobFailed;
+
+Event::listen(TelegramJobFailed::class, function (TelegramJobFailed $event) {
+    // $event->job
+    // $event->context
+    // $event->exception
+    // $event->attempts
+});
+```
+
+Use Laravel's normal failed-job commands to inspect or retry jobs:
+
+```bash
+php artisan queue:failed
+php artisan queue:retry all
+```
+
+### 5. Queue Job Middleware
+
+All package queue jobs can use Laravel queue middleware. Add middleware class
+names or middleware objects to `queue.middleware` in the published
+`config/telegram-bot-router.php` file:
+
+```php
+'queue' => [
+    // Other Queue settings...
+    'middleware' => [
+        App\Jobs\Middleware\ThrottleTelegram::class,
+    ],
+],
+```
+
+The middleware is resolved through Laravel's service container for each job.
+
+### Queue Lifecycle
+
+```text
+Telegram update
+    ↓
+Route middleware and rate limits
+    ↓
+Queue job is dispatched
+    ↓
+Duplicate update check (update_id + cache)
+    ↓
+Controller action or Telegram API message
+    ↓
+Success log
+
+On exception: log → backoff → retry
+After final failure: Laravel failed job → TelegramJobFailed event
+```
 
 ## 🟡 Priority 9 — Named Telegram Routes
 
