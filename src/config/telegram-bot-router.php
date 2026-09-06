@@ -8,6 +8,7 @@ return [
     'webhook' => [
         'path' => env('TELEGRAM_WEBHOOK_PATH', '/telegram/webhook'),
         'url' => env('TELEGRAM_WEBHOOK_URL', ''),
+        'secret_token' => env('TELEGRAM_WEBHOOK_SECRET_TOKEN', ''),
     ],
 
     'polling' => [
@@ -46,7 +47,7 @@ return [
 
     'middleware' => [
         'aliases' => [
-            // 'admin' => App\Telegram\Middleware\IsAdmin::class,
+            // 'admin' => App\\Telegram\\Middleware\\IsAdmin::class,
         ],
     ],
 
@@ -70,7 +71,7 @@ return [
     ],
 
     'exceptions' => [
-        'handler' => ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler::class,
+        'handler' => ReyhanTeam\\TelegramBotRouter\\Exceptions\\TelegramExceptionHandler::class,
         'log_level' => env('TELEGRAM_EXCEPTION_LOG_LEVEL', 'error'),
     ],
 
