@@ -36,34 +36,42 @@ final class Priority16FoundationTest extends TestCase
         $this->assertNotNull($this->app->make('telegram.router'));
     }
 
-    public function test_telegram_fake_supports_target_api_for_outgoing_and_incoming_assertions(): void
+    public function test_telegram_fake_supports_api_responses_incoming_factories_and_assertions(): void
     {
         $fake = Telegram::fake();
+        $fake->respond('getMe', ['id' => 99, 'is_bot' => true, 'username' => 'test_bot']);
         $fake->respond('sendMessage', ['message_id' => 10]);
 
+        $this->assertSame(['id' => 99, 'is_bot' => true, 'username' => 'test_bot'], Telegram::getMe());
         Telegram::sendMessage(2001, 'Welcome!');
-        $fake->receive(self::fakeMessage('/start'));
-        $fake->receive(self::fakeCallbackQuery('profile:42'));
+
+        $fake->command('/start');
+        $fake->message('hello');
+        $fake->callbackQuery('profile:42');
 
         $fake->assertMessageSent('Welcome!');
         $fake->assertCommandReceived('start');
+        $fake->assertMessageReceived('hello');
         $fake->assertCallbackReceived('profile:42');
         $fake->assertApiCalledWith('sendMessage', [2001, 'Welcome!']);
+        $fake->assertNoApiCall('deleteMessage');
     }
 
-    public function test_fake_update_payloads_cover_message_command_and_callback_query_shapes(): void
+    public function test_fake_update_payloads_cover_message_user_chat_and_callback_shapes(): void
     {
-        $message = self::fakeMessage('/start');
-        $callback = self::fakeCallbackQuery('profile:42');
+        $fake = Telegram::fake();
+        $message = $fake->command('start');
+        $callback = $fake->callbackQuery('profile:42');
 
-        $this->assertSame('/start', $message['message']['text']);
-        $this->assertSame('profile:42', $callback['callback_query']['data']);
-        $this->assertSame(1001, self::fakeUser()['id']);
-        $this->assertSame(2001, self::fakeChat()['id']);
-        $this->assertSame('/start', TelegramUpdate::fromArray($message)->message->text);
+        $this->assertSame('/start', $message->message->text);
+        $this->assertSame('profile:42', $callback->callbackQueryData());
+        $this->assertSame(1001, $message->userId());
+        $this->assertSame(2001, $message->chatId());
+        $this->assertSame(4001, $message->messageId());
+        $this->assertCount(2, $fake->updates());
     }
 
-    public function test_events_can_be_asserted_for_all_core_update_types(): void
+    public function test_events_can_be_asserted_for_core_message_and_callback_events(): void
     {
         Event::fake();
         $message = TelegramUpdate::fromArray(self::fakeMessage('/start'));
@@ -96,17 +104,19 @@ final class Priority16FoundationTest extends TestCase
         Bus::assertDispatched(ProcessTelegramUpdateJob::class);
     }
 
-    public function test_keyboard_assertions_can_inspect_callbacks_and_markup(): void
+    public function test_keyboard_markup_can_be_asserted_through_the_fake(): void
     {
+        $fake = Telegram::fake();
         $keyboard = Keyboard::inline()
             ->button('Profile', 'profile:42')
             ->row()
             ->url('Docs', 'https://example.com');
 
         $markup = $keyboard->toArray();
+        Telegram::sendMessage(2001, 'Choose:', null, null, null, null, null, null, null, null, null, null, null, null, $markup);
 
-        $this->assertSame('profile:42', $markup['inline_keyboard'][0][0]['callback_data']);
-        $this->assertSame('https://example.com', $markup['inline_keyboard'][1][0]['url']);
+        $fake->assertMessageSent('Choose:');
+        $fake->assertKeyboardSent($markup);
     }
 
     public function test_api_registry_exposes_every_registered_method_for_contract_tests(): void
