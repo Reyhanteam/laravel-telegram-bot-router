@@ -2,74 +2,58 @@
 
 > «A Laravel-native routing and management system for Telegram bots.»
 
-این فایل نقشه‌ی اصلی توسعه‌ی پروژه است. ترتیب مراحل بر اساس **اهمیت فنی، وابستگی قابلیت‌ها و production-readiness** تنظیم شده است.
+این فایل نقشه‌ی اصلی توسعه‌ی پروژه است. اولویت‌ها بر اساس اهمیت فنی، وابستگی قابلیت‌ها و production-readiness تنظیم شده‌اند.
 
-## قانون اصلی
-
-تا وقتی یک بخش دارای 🟡 باشد، قابلیت جدید مهمی را که به آن وابسته است شروع نمی‌کنیم. ابتدا قابلیت‌های موجود را از «کار می‌کند» به **کامل، تست‌شده، امن، مستند و production-ready** می‌رسانیم.
+## وضعیت‌ها
 
 | وضعیت | معنی |
 |---|---|
-| ✅ | پیاده‌سازی + تست + رفتار پایدار |
+| ✅ | پیاده‌سازی + بررسی + مستندات انجام شده |
 | 🟡 | هسته وجود دارد اما هنوز باید کامل/تست/امن/مستند شود |
 | ⬜ | هنوز پیاده‌سازی نشده |
 
+## قانون اصلی
+
+تا وقتی Completion Gate کامل نشده، قابلیت جدید بزرگی مثل Regex Callback Query شروع نمی‌شود. هر بخش باید از «کار می‌کند» به **کامل، تست‌شده، امن، مستند و production-ready** برسد.
+
 ---
 
-# 🟢 Foundation فعلی
+# 🟢 Foundation
 
 ## 1. Core Telegram Routing — ✅
 
-- ✅ Composer Package / Packagist / Service Provider
+- ✅ Composer / Packagist / Service Provider
 - ✅ `routes/bot.php`
-- ✅ Webhook
-- ✅ Polling
-- ✅ Command / Text / Callback Query routes
-- ✅ Closure و Controller handlers
-- ✅ Container resolution و Dependency Injection
-- ✅ `TelegramUpdate`
-- ✅ Exact matching
-- ✅ Text regex matching
+- ✅ Webhook / Polling
+- ✅ Command / Text / Callback Query routing
+- ✅ Closure / Controller handlers
+- ✅ Container resolution / Dependency Injection
+- ✅ Exact matching / text regex
 - ✅ Route parameters / constraints
 - ✅ Command arguments
-- ✅ Fallback و invalid-update handling
-- ✅ Update type routing
-
-### Update Types
-
-Message, Callback Query, Inline Query, Edited Message, Channel Post, Edited Channel Post, Chat Member, My Chat Member, Chat Join Request — همگی در هسته پشتیبانی می‌شوند.
-
-> Regex برای Callback Query هنوز قابلیت جدید بعدی است و عمداً در Backlog قرار دارد.
-
----
+- ✅ Fallback / invalid-update handling
+- ✅ Telegram update types
 
 ## 2. Middleware System — ✅
 
 - ✅ Global / route middleware
 - ✅ Groups / nested groups
-- ✅ Parameters
-- ✅ Named aliases
+- ✅ Parameters / aliases
 - ✅ Container resolution
-- ✅ Short-circuit
-- ✅ Execution order
+- ✅ Short-circuit / execution order
 - ✅ `TelegramMiddlewareInterface`
-
----
 
 ## 3. Conversation & State — ✅
 
 - ✅ Per-user / per-chat state
 - ✅ Steps / next message / current step
 - ✅ Finish / timeout / data
-- ✅ Laravel Cache
-- ✅ Closure و Controller steps
+- ✅ Laravel Cache / configurable cache store
+- ✅ Closure / Controller steps
 - ✅ Cancel API / command
 - ✅ Input validation helpers
 - ✅ Explicit conversation middleware
 - ✅ Conversation events
-- ✅ Storage driver / cache store
-
----
 
 ## 4. Events — ✅
 
@@ -78,14 +62,11 @@ Message, Callback Query, Inline Query, Edited Message, Channel Post, Edited Chan
 - ✅ Command Received
 - ✅ Callback Query Received
 - ✅ Route Matched
-- ✅ Conversation Started / Step Completed / Finished / Cancelled / Timed Out
-
----
+- ✅ Conversation lifecycle events
 
 ## 5. Route Management & Conditions — ✅
 
-- ✅ Route list
-- ✅ Named routes
+- ✅ Route list / named routes
 - ✅ Route cache / clear
 - ✅ Admin-only
 - ✅ User / chat conditions
@@ -95,13 +76,11 @@ Message, Callback Query, Inline Query, Edited Message, Channel Post, Edited Chan
 
 ---
 
-# 🔴 Completion Gate — اول این‌ها باید 100٪ شوند
-
-> **این بخش، وضعیت فعلی پروژه است. قبل از Regex Callback هیچ Feature بزرگ جدیدی شروع نمی‌شود.**
+# 🔴 Completion Gate — قبل از Featureهای جدید
 
 ## 6. Exception, Error Handling & Security Hardening — 🟡 CURRENT
 
-### انجام شده
+### Exception handling
 
 - ✅ Telegram route exceptions
 - ✅ Invalid update exceptions
@@ -111,26 +90,38 @@ Message, Callback Query, Inline Query, Edited Message, Channel Post, Edited Chan
 - ✅ Sensitive-data sanitization foundation
 - ✅ Token redaction in logs
 
-### باقی‌مانده
+### Webhook authentication / verification
 
-- 🟡 Webhook authentication / verification
-- 🟡 Telegram `secret_token` verification
-- 🟡 Constant-time secret comparison
-- 🟡 Correct 401/403 behavior
-- 🟡 Verification tests
-- 🟡 Security configuration
-- 🟡 Security policy
-- 🟡 Production hardening guide
-- 🟡 Threat / abuse considerations
+- ✅ Configurable Telegram `secret_token`
+- ✅ `X-Telegram-Bot-Api-Secret-Token` verification
+- ✅ Constant-time comparison with `hash_equals()`
+- ✅ Missing/invalid secret rejected with HTTP `401 Unauthorized`
+- ✅ Verification occurs before JSON parsing and routing
+- ✅ Empty secret preserves backwards compatibility by disabling verification
+- ⬜ Verification test matrix — moved to Testing Gate
 
-### خروجی نهایی
+### Security documentation
+
+- ✅ Security policy
+- ✅ Production hardening guide
+- ✅ Threat / abuse considerations
+- ✅ Secret handling and rotation guidance
+- ✅ Logging and sensitive-data policy
+- ✅ Authorization vs webhook authentication guidance
+
+### Remaining in this Gate
+
+- 🟡 Webhook verification test suite
+- 🟡 Final exception/security integration review
+
+### Security flow
 
 ```text
 Telegram Webhook
       ↓
 Secret Verification
       ↓
- invalid → 401/403
+ invalid → 401
       ↓
  valid
       ↓
@@ -141,111 +132,85 @@ Parse Update → Router
 
 ## 7. Queue Reliability — 🟡
 
-### الان واقعاً وجود دارد
+### موجود
 
 - ✅ Laravel Queue integration
-- ✅ Queue update processing
-- ✅ Queued routes
-- ✅ Attempts / tries configuration
-- ✅ Backoff configuration
-- ✅ Timeout configuration
+- ✅ Queued routes / update processing
+- ✅ Attempts / backoff / timeout
 - ✅ Queue middleware
 - ✅ Deduplication foundation
-- ✅ Failed job hook
+- ✅ Failed-job hook
 - ✅ `TelegramJobFailed` event
 - ✅ Failure logging foundation
 
-### برای 100٪ باقی مانده
+### باقی‌مانده
 
 - 🟡 Retry behavior tests
 - 🟡 Failed-job integration tests
 - 🟡 Retryable / non-retryable exception policy
 - 🟡 Failed update persistence/inspection decision
-- 🟡 Verification against real Laravel queue worker behavior
+- 🟡 Real Laravel queue worker verification
 - 🟡 Production queue documentation
-
-> بنابراین Roadmap قدیمی که Retry/Backoff را «پیاده نشده» می‌دانست، دیگر معتبر نیست؛ بخش زیادی از آن همین حالا در کد وجود دارد.
-
----
 
 ## 8. Testing & Fake Telegram — 🟡
 
-### انجام شده
+### موجود
 
 - ✅ `Telegram::fake()`
-- ✅ Fake API calls
-- ✅ Fake API responses
-- ✅ Fake messages / commands / callback queries
+- ✅ Fake API calls/responses
+- ✅ Fake messages/commands/callback queries
 - ✅ Fake incoming updates
-- ✅ API / message / keyboard / callback assertions
+- ✅ API/message/keyboard/callback assertions
 - ✅ Controller execution coverage
-- ✅ Webhook integration tests
-- ✅ Callback Query integration tests
+- ✅ Webhook and Callback Query integration foundations
 
-### برای 100٪ باقی مانده
+### باقی‌مانده
 
+- 🟡 Webhook secret verification tests
 - 🟡 Full route-testing helpers
 - 🟡 Middleware integration coverage
 - 🟡 Conversation integration coverage
 - 🟡 Queue integration coverage
 - 🟡 Rate-limit integration coverage
-- 🟡 Invalid-update test matrix
+- 🟡 Invalid-update matrix
 - 🟡 Route parameter/constraint matrix
 - 🟡 Polling testable architecture
 - 🟡 Complete PHPUnit/Testbench suite
-- 🟡 Public testing examples/documentation
-
-> تست‌های Callback Query و Webhook اخیراً اضافه شده‌اند و Callback Query واقعی با Polling نیز قبلاً تأیید شده است.
-
----
+- 🟡 Public testing documentation
 
 ## 9. Telegram API & Response Layer — 🟡
 
-### انجام شده
+### موجود
 
 - ✅ Telegram API client
 - ✅ API method registry
-- ✅ Developer-friendly API method surface / facade foundation
+- ✅ Developer-friendly API facade foundation
 
-### برای 100٪ باقی مانده
+### باقی‌مانده
 
 - 🟡 Unified high-level Response API
-- 🟡 Response objects
-- 🟡 Fluent response helpers
+- 🟡 Response objects / fluent helpers
 - 🟡 Consistent controller/closure return handling
-- 🟡 Reply markup integration
-- 🟡 Parse mode helpers
+- 🟡 Reply markup / parse mode helpers
 - 🟡 Reply-to-message helpers
 - 🟡 Edit/delete helpers
 - 🟡 Media abstraction
-- 🟡 Response tests
-- 🟡 Response documentation
-
----
+- 🟡 Response tests / documentation
 
 ## 10. Keyboard Builder — 🟡
 
-Implementation فعلی از Roadmap قدیمی جلوتر است و شامل Inline/Reply، callback، URL، WebApp، Login، switch-inline، pay، rows، dynamic/conditional، factory و validation است.
-
 ### موجود
 
-- ✅ Inline keyboard
-- ✅ Reply keyboard
-- ✅ Callback buttons
-- ✅ URL buttons
-- ✅ WebApp buttons
-- ✅ Login buttons
-- ✅ Switch inline query buttons
-- ✅ Switch inline query current chat
-- ✅ Pay button
+- ✅ Inline / Reply keyboards
+- ✅ Callback / URL / WebApp / Login buttons
+- ✅ Switch-inline / Pay buttons
 - ✅ Rows / chaining
 - ✅ Dynamic / conditional buttons
-- ✅ Keyboard factories
+- ✅ Factories
 - ✅ Callback-data helper
-- ✅ Validation
-- ✅ JSON serialization
+- ✅ Validation / JSON serialization
 
-### برای 100٪ باقی مانده
+### باقی‌مانده
 
 - 🟡 Comprehensive Telegram compatibility tests
 - 🟡 Edge-case validation tests
@@ -253,41 +218,34 @@ Implementation فعلی از Roadmap قدیمی جلوتر است و شامل In
 - 🟡 Final Response API integration
 - 🟡 Documentation
 
----
-
 ## 11. Outgoing Telegram Rate Limiter — 🟡
 
 ### موجود
 
-- ✅ Per-user rate limit
-- ✅ Per-chat rate limit
-- ✅ Per-command rate limit
+- ✅ Per-user / per-chat / per-command limits
 - ✅ Configurable limits
 - ✅ Laravel Cache / RateLimiter integration
 
-### باقی مانده
+### باقی‌مانده
 
 - 🟡 Outgoing API throttling
 - 🟡 Queue-aware throttling
 - 🟡 Telegram `retry_after` handling
 - 🟡 Backoff integration
-- 🟡 Tests
-- 🟡 Documentation
+- 🟡 Tests / documentation
 
 ---
 
-# 🟠 ترتیب اجرای Completion Gate
+# 🟠 ترتیب Completion Gate
 
-**دقیقاً به این ترتیب جلو می‌رویم:**
+1. Exception + Webhook Security — 🟡
+2. Queue Reliability — 🟡
+3. Testing / Fake Telegram — 🟡
+4. Telegram Response API — 🟡
+5. Keyboard Completion — 🟡
+6. Outgoing Rate Limiter — 🟡
 
-1. Exception + Webhook Security
-2. Queue Reliability
-3. Testing / Fake Telegram
-4. Telegram Response API
-5. Keyboard completion
-6. Outgoing Rate Limiter
-
-### Definition of Done برای هر مورد
+### Definition of Done
 
 ```text
 Implementation
@@ -309,7 +267,7 @@ Stable API
 
 ---
 
-# 🚀 بعد از Completion Gate — Feature Roadmap
+# 🚀 Feature Roadmap — بعد از Completion Gate
 
 ## 12. Regex Callback Query Routing — ⬜ NEXT
 
@@ -330,220 +288,110 @@ BOT::onCallbackQuery(
 - ⬜ Unit + integration tests
 - ⬜ Documentation
 
----
-
 ## 13. Bot Context — ⬜
-
-- ⬜ Current update
-- ⬜ User / Chat
-- ⬜ Current route
-- ⬜ Route parameters
-- ⬜ Command arguments
-- ⬜ Conversation state
-- ⬜ Middleware/shared state
-- ⬜ Telegram API client
-- ⬜ Bot information
-
----
+- ⬜ Current update / User / Chat
+- ⬜ Current route / parameters / command arguments
+- ⬜ Conversation / middleware state
+- ⬜ API client / bot information
 
 ## 14. Pagination — ⬜
-
-- ⬜ Previous / Next
-- ⬜ Page numbers
+- ⬜ Previous / Next / page numbers
 - ⬜ Callback pagination
 - ⬜ Collection integration
-- ⬜ Custom pagination
-- ⬜ State-safe pagination
-
----
+- ⬜ Custom and state-safe pagination
 
 ## 15. Forms & Wizards — ⬜
-
 - ⬜ Multi-step forms
 - ⬜ Validation
-- ⬜ Previous / Next
-- ⬜ Cancel
-- ⬜ Confirmation
+- ⬜ Previous / Next / Cancel / Confirmation
 - ⬜ Conversation integration
 
----
-
 ## 16. User & Chat Abstraction — ⬜
-
-- ⬜ Telegram User abstraction
-- ⬜ Telegram Chat abstraction
-- ⬜ Metadata
-- ⬜ User/chat state
+- ⬜ Telegram User / Chat abstraction
+- ⬜ Metadata / state
 - ⬜ Laravel integration
 
----
-
 ## 17. Deep Links — ⬜
-
 - ⬜ `/start` parameters
-- ⬜ Referral tracking
-- ⬜ Campaign parameters
+- ⬜ Referral / campaign tracking
 - ⬜ Onboarding helpers
 
----
-
 ## 18. Admin & Permission System — ⬜
-
-- ⬜ Roles
-- ⬜ Permissions
-- ⬜ Command permissions
-- ⬜ Chat permissions
-- ⬜ Moderation permissions
-
----
+- ⬜ Roles / permissions
+- ⬜ Command / chat / moderation permissions
 
 ## 19. Group Moderation — ⬜
-
-- ⬜ Ban / unban
-- ⬜ Restrict users
-- ⬜ Warning system
+- ⬜ Ban / unban / restrict
+- ⬜ Warnings
 - ⬜ Link / word filtering
 - ⬜ Moderation logs
 
----
-
 ## 20. Auto Moderation — ⬜
-
 - ⬜ Rule engine
-- ⬜ Regex rules
-- ⬜ Spam rules
+- ⬜ Regex / spam rules
 - ⬜ Automatic actions
-- ⬜ Warning thresholds
-
----
 
 ## 21. Topics & Forums — ⬜
-
-- ⬜ Topic detection
-- ⬜ Topic routing
-- ⬜ Topic-specific commands
-- ⬜ Topic permissions
-- ⬜ Topic-aware conversations
-
----
+- ⬜ Topic detection / routing
+- ⬜ Topic permissions / conversations
 
 ## 22. Telegram WebApp / Mini Apps — ⬜
-
 - ⬜ Init data validation
-- ⬜ Authentication
-- ⬜ User integration
+- ⬜ Authentication / user integration
 - ⬜ Secure backend communication
-- ⬜ Laravel integration
-
----
 
 ## 23. Payments — ⬜
-
-- ⬜ Invoices
-- ⬜ Payment updates
-- ⬜ Successful payments
-- ⬜ Provider integration
-- ⬜ Payment events
-
----
+- ⬜ Invoices / payment updates
+- ⬜ Provider integration / events
 
 ## 24. Broadcast System — ⬜
-
-- ⬜ Batch sending
-- ⬜ Segmentation
-- ⬜ Scheduling
-- ⬜ Queue integration
-- ⬜ Delivery tracking
-- ⬜ Failure handling
+- ⬜ Batch sending / segmentation
+- ⬜ Scheduling / queues
+- ⬜ Delivery/failure tracking
 - ⬜ Rate limiting
 
----
-
 ## 25. Multi-Bot — ⬜
-
-- ⬜ Multiple bot tokens
-- ⬜ Bot-specific routes
-- ⬜ Bot-specific middleware
-- ⬜ Bot-specific configuration
-- ⬜ Bot-specific conversations
+- ⬜ Multiple tokens
+- ⬜ Bot-specific routes/middleware/configuration/conversations
 - ⬜ Bot management
 
----
-
 ## 26. Plugin / Module Architecture — ⬜
-
-- ⬜ Modules
-- ⬜ Plugins
-- ⬜ Lifecycle
-- ⬜ Configuration
-- ⬜ Plugin routes
-- ⬜ Plugin middleware
-- ⬜ Plugin events
+- ⬜ Modules / plugins
+- ⬜ Lifecycle / configuration
+- ⬜ Routes / middleware / events
 
 ---
 
 # 🛠️ Developer Experience & Operations
 
 ## 27. Debug & Inspector — ⬜
-
 - ⬜ Update inspector
-- ⬜ Matched route
-- ⬜ Middleware pipeline
-- ⬜ Conversation state
-- ⬜ API requests/responses
-- ⬜ Debug mode
-- ⬜ Diagnostics
-
----
+- ⬜ Route / middleware / conversation inspection
+- ⬜ API diagnostics
 
 ## 28. Telegram Doctor — ⬜
-
 ```bash
 php artisan telegram:doctor
 ```
-
-- ⬜ Token check
-- ⬜ API connection
-- ⬜ Webhook
-- ⬜ Polling
-- ⬜ Routes
-- ⬜ Cache
-- ⬜ Queue
-- ⬜ Permissions
-- ⬜ Configuration
-
----
+- ⬜ Token / API / webhook / polling checks
+- ⬜ Routes / cache / queue / permissions / configuration
 
 ## 29. CI/CD & Compatibility — ⬜
-
 - ⬜ GitHub Actions matrix
-- ⬜ PHP versions
-- ⬜ Laravel versions
-- ⬜ Static analysis
-- ⬜ Code style
-- ⬜ Dependency checks
+- ⬜ PHP / Laravel compatibility
+- ⬜ Static analysis / code style / dependency checks
 - ⬜ Automated releases
 
----
-
 ## 30. Documentation & Examples — ⬜
-
 - ⬜ Documentation website
-- ⬜ English docs
-- ⬜ Persian docs
+- ⬜ English / Persian documentation
 - ⬜ API reference
-- ⬜ Installation/configuration
-- ⬜ Webhook/polling
-- ⬜ Routing/controllers
-- ⬜ Middleware/conversations
-- ⬜ Queue/testing
-- ⬜ Keyboard/Response API
+- ⬜ Installation / webhook / polling / routing
+- ⬜ Middleware / conversations / queue / testing
+- ⬜ Keyboard / Response API
 - ⬜ Example applications
 
----
-
 ## 31. AI-Friendly Documentation — ⬜
-
 - ⬜ Structured API reference
 - ⬜ Machine-readable examples
 - ⬜ Task recipes
@@ -555,56 +403,21 @@ php artisan telegram:doctor
 # 📍 CURRENT POSITION
 
 ```text
-Current Foundation
-       ↓
-🔴 Completion Gate                    ← NOW
-       ↓
-1. Exception + Webhook Security
-       ↓
+Completion Gate
+      ↓
+1. Exception + Webhook Security       ← CURRENT
+      ↓
 2. Queue Reliability
-       ↓
+      ↓
 3. Testing / Fake Telegram
-       ↓
+      ↓
 4. Response API
-       ↓
+      ↓
 5. Keyboard Completion
-       ↓
+      ↓
 6. Outgoing Rate Limiter
-       ↓
-🟢 Foundation = 100%
-       ↓
-🚀 Regex Callback Query
-       ↓
-Bot Context
-       ↓
-Pagination
-       ↓
-Forms / Wizards
-       ↓
-User & Chat
-       ↓
-Deep Links
-       ↓
-Admin / Permissions
-       ↓
-Moderation / Topics
-       ↓
-WebApp / Payments
-       ↓
-Broadcast
-       ↓
-Multi-Bot
-       ↓
-Plugins
-       ↓
-Inspector / Doctor
-       ↓
-CI/CD
-       ↓
-Documentation
-       ↓
-AI Documentation
+      ↓
+Regex Callback Query Routing
 ```
 
-> **مرحله‌ی فعلی: Gate 1 — Exception + Webhook Security.**
-> تا Gate 1 تا Gate 6 کامل نشوند، سراغ Regex Callback نمی‌رویم.
+> Webhook authentication and the security policy/hardening documentation are now implemented. Their automated verification tests remain intentionally in the Testing Gate, so the next step is testing—not another new feature.
