@@ -14,6 +14,7 @@ use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
 use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
 use ReyhanTeam\TelegramBotRouter\Events\RouteMatched;
 use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
+use ReyhanTeam\TelegramBotRouter\Facades\Telegram;
 use ReyhanTeam\TelegramBotRouter\Jobs\ProcessTelegramUpdateJob;
 use ReyhanTeam\TelegramBotRouter\Keyboard\Keyboard;
 use ReyhanTeam\TelegramBotRouter\TelegramBot;
@@ -33,6 +34,21 @@ final class Priority16FoundationTest extends TestCase
         $this->assertInstanceOf(TelegramApiClient::class, $this->app->make(TelegramApiClient::class));
         $this->assertNotNull($this->app->make('telegram.api'));
         $this->assertNotNull($this->app->make('telegram.router'));
+    }
+
+    public function test_telegram_fake_supports_target_api_for_outgoing_and_incoming_assertions(): void
+    {
+        $fake = Telegram::fake();
+        $fake->respond('sendMessage', ['message_id' => 10]);
+
+        Telegram::sendMessage(2001, 'Welcome!');
+        $fake->receive(self::fakeMessage('/start'));
+        $fake->receive(self::fakeCallbackQuery('profile:42'));
+
+        $fake->assertMessageSent('Welcome!');
+        $fake->assertCommandReceived('start');
+        $fake->assertCallbackReceived('profile:42');
+        $fake->assertApiCalledWith('sendMessage', [2001, 'Welcome!']);
     }
 
     public function test_fake_update_payloads_cover_message_command_and_callback_query_shapes(): void
