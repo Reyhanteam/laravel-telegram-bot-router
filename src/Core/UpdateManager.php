@@ -2,6 +2,7 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Core;
 
+use Illuminate\Http\Request;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler;
 use ReyhanTeam\TelegramBotRouter\Providers\PollingProvider;
 use ReyhanTeam\TelegramBotRouter\Providers\WebhookProvider;
@@ -9,7 +10,7 @@ use Throwable;
 
 class UpdateManager
 {
-    public function handleWebhook()
+    public function handleWebhook(Request $request)
     {
         $config = config('telegram-bot-router');
 
@@ -23,7 +24,7 @@ class UpdateManager
 
         try {
             $provider = new WebhookProvider($router, $config);
-            $provider->start();
+            $provider->start($request);
         } catch (Throwable $e) {
             $handlerClass = $config['exceptions']['handler'] ?? TelegramExceptionHandler::class;
             app()->make($handlerClass)->handle($e, ['source' => 'webhook']);
