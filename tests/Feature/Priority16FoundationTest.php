@@ -180,6 +180,48 @@ final class Priority16FoundationTest extends TestCase
         Event::assertDispatched(RouteMatched::class);
     }
 
+    public function test_webhook_http_request_routes_callback_query_to_controller_and_fake_api(): void
+    {
+        $fake = Telegram::fake();
+        $fake->respond('sendMessage', ['message_id' => 11]);
+        TelegramTestController::$executed = false;
+
+        TelegramBot::onCallbackQuery('profile', [TelegramTestController::class, 'profile']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeCallbackQuery('profile'));
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'ok']);
+        $this->assertTrue(TelegramTestController::$executed);
+        $fake->assertCallbackReceived('profile');
+        $fake->assertMessageSent('Profile opened!');
+        $fake->assertApiCalledWith('sendMessage', [2001, 'Profile opened!']);
+    }
+
+    public function test_webhook_http_request_dispatches_callback_event_and_route_match(): void
+    {
+        Event::fake();
+        TelegramBot::onCallbackQuery('profile', [TelegramTestController::class, 'profile']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeCallbackQuery('profile'));
+
+        $response->assertOk();
+        Event::assertDispatched(UpdateReceived::class);
+        Event::assertDispatched(CallbackQueryReceived::class);
+        Event::assertDispatched(RouteMatched::class);
+    }
+
+    public function test_webhook_callback_route_parameters_are_extracted(): void
+    {
+        TelegramBot::onCallbackQuery('profile:{id}', static function (TelegramUpdate $update): void {
+            self::assertSame(['id' => '42'], $update->routeParameters);
+        });
+
+        $response = $this->postJson('/telegram/webhook', self::fakeCallbackQuery('profile:42'));
+
+        $response->assertOk();
+    }
+
     public function test_webhook_rejects_invalid_update_without_calling_telegram_api(): void
     {
         $fake = Telegram::fake();
