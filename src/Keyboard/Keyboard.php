@@ -55,6 +55,7 @@ final class Keyboard implements JsonSerializable, Stringable
         }
 
         if ($parameters === []) {
+            self::assertCallbackDataValue($route);
             return $route;
         }
 
@@ -86,7 +87,7 @@ final class Keyboard implements JsonSerializable, Stringable
         }
 
         if (!$this->inline) {
-            return $this->addButton(['text' => $text]);
+            throw new InvalidArgumentException('Reply keyboard buttons do not accept a callback or URL value.');
         }
 
         return $this->callbackButton($text, $value);
@@ -261,7 +262,10 @@ final class Keyboard implements JsonSerializable, Stringable
 
     public function validate(): self
     {
-        if ($this->rows === [] && !isset($this->options['remove_keyboard'], $this->options['force_reply'])) {
+        $isSpecialReplyMarkup = ($this->options['remove_keyboard'] ?? false) === true
+            || ($this->options['force_reply'] ?? false) === true;
+
+        if ($this->rows === [] && !$isSpecialReplyMarkup) {
             throw new InvalidArgumentException('Keyboard must contain at least one button row.');
         }
 
