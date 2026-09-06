@@ -2,6 +2,7 @@
 
 namespace ReyhanTeam\TelegramBotRouter\Providers;
 
+use Illuminate\Http\Request;
 use ReyhanTeam\TelegramBotRouter\Events\CallbackQueryReceived;
 use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
 use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
@@ -18,9 +19,9 @@ class WebhookProvider
         $this->router = $router;
     }
 
-    public function start()
+    public function start(?Request $request = null)
     {
-        $raw = file_get_contents('php://input');
+        $raw = $request?->getContent() ?? file_get_contents('php://input');
         $update = json_decode($raw, true);
 
         if (!is_array($update) || json_last_error() !== JSON_ERROR_NONE) {
