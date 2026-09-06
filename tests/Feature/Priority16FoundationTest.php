@@ -148,6 +148,48 @@ final class Priority16FoundationTest extends TestCase
         $this->assertSame('profile:{id}', TelegramBot::getRouteByName('profile')['pattern']);
     }
 
+    public function test_webhook_http_request_routes_command_to_controller_and_fake_api(): void
+    {
+        $fake = Telegram::fake();
+        $fake->respond('sendMessage', ['message_id' => 10]);
+        TelegramTestController::$executed = false;
+
+        TelegramBot::onCommand('start', [TelegramTestController::class, 'start']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'));
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'ok']);
+        $this->assertTrue(TelegramTestController::$executed);
+        $fake->assertCommandReceived('start');
+        $fake->assertMessageSent('Welcome!');
+        $fake->assertApiCalledWith('sendMessage', [2001, 'Welcome!']);
+    }
+
+    public function test_webhook_http_request_dispatches_core_events_for_command(): void
+    {
+        Event::fake();
+        TelegramBot::onCommand('start', [TelegramTestController::class, 'start']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'));
+
+        $response->assertOk();
+        Event::assertDispatched(UpdateReceived::class);
+        Event::assertDispatched(MessageReceived::class);
+        Event::assertDispatched(CommandReceived::class);
+        Event::assertDispatched(RouteMatched::class);
+    }
+
+    public function test_webhook_rejects_invalid_update_without_calling_telegram_api(): void
+    {
+        $fake = Telegram::fake();
+
+        $response = $this->post('/telegram/webhook', ['invalid' => 'payload']);
+
+        $response->assertStatus(400);
+        $fake->assertNoApiCall('sendMessage');
+    }
+
     /** @return array<string, mixed> */
     private static function fakeUser(): array
     {
