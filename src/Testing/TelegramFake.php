@@ -181,8 +181,10 @@ final class TelegramFake
     {
         $this->assertApiCalled('sendMessage', static function (array $calls) use ($keyboard): bool {
             foreach ($calls as $call) {
-                if ($this->containsExactArray($call['arguments'], $keyboard)) {
-                    return true;
+                foreach ($call['arguments'] as $argument) {
+                    if (is_array($argument) && $argument === $keyboard) {
+                        return true;
+                    }
                 }
             }
 
@@ -223,18 +225,6 @@ final class TelegramFake
             $this->calls,
             static fn (array $call): bool => $call['method'] === $method
         ));
-    }
-
-    /** @param array<int|string, mixed> $haystack */
-    private function containsExactArray(array $haystack, array $needle): bool
-    {
-        foreach ($haystack as $value) {
-            if (is_array($value) && $value === $needle) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /** @return array<string, mixed> */
