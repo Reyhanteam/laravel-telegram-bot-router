@@ -2,61 +2,36 @@
 
 ## Version 1.3.2
 
-A Laravel package for routing Telegram bot updates with a Laravel-style routing system. Telegram routes live in `routes/bot.php` and are kept separate from Laravel HTTP routes.
+A Laravel-native Telegram Bot API router. Telegram routes live in `routes/bot.php`, separate from Laravel HTTP routes in `routes/web.php`.
 
 ```text
 routes/web.php  -> Laravel HTTP routes
 routes/bot.php  -> Telegram bot routes
 ```
 
-## Current Features
+## Features
 
-- ✅ Webhook support
-- ✅ Polling support
-- ✅ `routes/bot.php`
-- ✅ `BOT::onCommand()`
-- ✅ `BOT::onText()`
-- ✅ `BOT::onCallbackQuery()`
-- ✅ `BOT::fallback()`
-- ✅ `BOT::onInvalid()`
-- ✅ Closure handlers
-- ✅ Controller + method handlers
-- ✅ Laravel Service Container controller resolution
-- ✅ Dependency Injection for controller methods
-- ✅ Regular expression matching for text routes
-- ✅ `TelegramUpdate` wrapper
-- ✅ Improved route matching
-- ✅ Route constraints
-- ✅ Command arguments
-- ✅ Route parameters
-- ✅ Middleware pipeline
-- ✅ Route middleware
-- ✅ Global Telegram middleware
-- ✅ Laravel Container middleware resolution
-- ✅ Middleware objects
-- ✅ Middleware short-circuit
-- ✅ Middleware execution order
-- ✅ Optional `TelegramMiddlewareInterface`
-- ✅ Middleware groups
-- ✅ Nested middleware groups
-- ✅ Middleware parameters
-- ✅ Named middleware aliases
-- ✅ Middleware configuration
-- ✅ Per-user conversation state
-- ✅ Conversation steps
-- ✅ Wait for next message
-- ✅ Save current step
-- ✅ Move to next step
-- ✅ Finish conversation
-- ✅ Conversation timeout
-- ✅ Conversation data
-- ✅ Laravel Cache storage
-- ✅ Controller and Closure conversation steps
-- ✅ Cancel conversation command/API
-- ✅ Input validation helpers
-- ✅ Explicit conversation middleware
-- ✅ Conversation events
-- ✅ Storage driver selection with `cacheStore()`
+- Webhook and polling support
+- Laravel `routes/bot.php`
+- Command, text and callback-query routing
+- Controller and Closure handlers
+- Laravel Service Container / dependency injection
+- Exact routes, text regex, route parameters and constraints
+- Command arguments
+- Fallback and invalid-update handling
+- Telegram `TelegramUpdate` wrapper
+- Global, group and route middleware
+- Middleware aliases and parameters
+- Conversations, steps, state, cancellation and validation
+- Conversation events and configurable cache storage
+- Route list/cache/clear commands
+- Admin/user/chat conditions and permissions
+- Telegram API client and developer-friendly API facade
+- Queued update processing with attempts, backoff, timeout and deduplication
+- Fake Telegram API and incoming-update testing helpers
+- Keyboard builder foundation
+- Webhook secret-token authentication
+- Security policy and production hardening guidance
 
 ## Installation
 
@@ -64,15 +39,10 @@ routes/bot.php  -> Telegram bot routes
 composer require reyhanteam/laravel-telegram-bot-router
 ```
 
-Publish the configuration:
+Publish configuration and Telegram routes:
 
 ```bash
 php artisan vendor:publish --tag=telegram-bot-config
-```
-
-Publish the Telegram routes:
-
-```bash
 php artisan vendor:publish --tag=telegram-bot-routes
 ```
 
@@ -82,58 +52,160 @@ This creates:
 routes/bot.php
 ```
 
-# Priority 1 — Core Telegram Routing
+## Routing
 
-The core routing layer is complete and supports both Telegram delivery modes through the same routing system.
+```php
+use ReyhanTeam\TelegramBotRouter\Facades\BOT;
+
+BOT::onCommand('start', [StartController::class, 'index']);
+BOT::onText('hello', [MessageController::class, 'hello']);
+BOT::onCallbackQuery([ProfileController::class, 'show']);
+```
+
+Controller dependencies are resolved through Laravel's Service Container.
 
 ## Webhook
 
-The package can register a Laravel endpoint for Telegram webhook updates.
+The default endpoint is:
 
 ```text
 POST /telegram/webhook
 ```
 
-Register the route with:
+Register the route explicitly with:
 
 ```bash
 php artisan reyhan:setWebhookRoute
 ```
 
-### Webhook Security
+### Webhook authentication
 
-For production, configure Telegram's webhook secret token:
+Production deployments should configure Telegram's webhook secret token:
 
 ```env
 TELEGRAM_WEBHOOK_SECRET_TOKEN=replace-with-a-random-secret
 ```
 
-When this value is configured, the package requires Telegram's:
+When configured, every webhook request must contain:
 
 ```text
 X-Telegram-Bot-Api-Secret-Token
 ```
 
-HTTP header on every webhook request. The comparison uses a constant-time `hash_equals()` check. Missing or incorrect secrets are rejected with HTTP `401` before the update is parsed or routed.
+The package validates the header before parsing or routing the update and compares the values with constant-time `hash_equals()`. Missing or incorrect secrets receive HTTP `401 Unauthorized`.
 
-Leaving the configuration empty disables this verification for backwards compatibility. Production deployments should always configure a secret and keep it out of source control.
+An empty secret keeps verification disabled for backwards compatibility. Do not use that mode for a production public webhook.
 
-For the complete security policy, threat model, secret-rotation procedure, and production hardening checklist, see [`SECURITY.md`](SECURITY.md).
+For the full security policy, production hardening checklist, threat/abuse considerations and secret-rotation procedure, read [`SECURITY.md`](SECURITY.md).
 
 ## Polling
-
-Polling continuously requests Telegram updates and sends them through the same router:
 
 ```bash
 php artisan reyhan:start-polling
 ```
 
-## `routes/bot.php`
+Polling and webhook updates use the same routing layer.
 
-Telegram routes are separated from normal Laravel HTTP routes.
+## Route parameters and constraints
 
 ```php
-use ReyhanTeam\TelegramBotRouter\TelegramBot as BOT;
+BOT::onCommand('user {id}', [UserController::class, 'show'])
+    ->whereNumber('id');
 ```
 
-Example:
+For `/user 123`, the controller can receive `$id === '123'` or read it from:
+
+```php
+$update->routeParameter('id');
+```
+
+Text routes support regular expressions:
+
+```php
+BOT::onText('/^hello/i', [MessageController::class, 'hello']);
+```
+
+Regex captures are available through `$update->matches`.
+
+## Middleware
+
+```php
+BOT::middleware([
+    CheckUser::class,
+    IsAdmin::class,
+])->onCommand('admin', [AdminController::class, 'index']);
+```
+
+Global and grouped middleware are also supported.
+
+## Conversations
+
+```php
+BOT::conversation('register')
+    ->step([RegisterController::class, 'name'])
+    ->step([RegisterController::class, 'phone'])
+    ->startOnCommand('register');
+```
+
+Conversation state is stored through Laravel Cache and can be configured per store.
+
+## Telegram API
+
+The package exposes the Telegram API through its developer-friendly facade. API calls can be faked in package tests without making network requests.
+
+## Queue processing
+
+Updates can be processed through Laravel Queue with configurable connection, queue name, attempts, backoff, timeout and deduplication settings.
+
+## Keyboard
+
+The keyboard builder supports Inline and Reply keyboards, callback/URL/WebApp/Login buttons, switch-inline buttons, rows, chaining, dynamic/conditional buttons, factories, callback-data helpers and validation.
+
+## Configuration
+
+The main configuration file is:
+
+```text
+config/telegram-bot-router.php
+```
+
+Important environment values include:
+
+```env
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_MODE=webhook
+TELEGRAM_WEBHOOK_PATH=/telegram/webhook
+TELEGRAM_WEBHOOK_SECRET_TOKEN=
+```
+
+Never commit bot tokens or webhook secrets to source control.
+
+## Security
+
+Security controls are designed in layers:
+
+```text
+Public webhook request
+        ↓
+Webhook secret verification
+        ↓
+JSON/update validation
+        ↓
+Telegram router
+        ↓
+Middleware / authorization
+        ↓
+Controller or Closure
+```
+
+Webhook authentication does not replace application authorization. User, chat and admin permissions must still be enforced by the application's route conditions or middleware.
+
+See [`SECURITY.md`](SECURITY.md) before deploying a public webhook.
+
+## Development roadmap
+
+See [`ROADMAP.md`](ROADMAP.md) for the implementation status, completion gates and upcoming features.
+
+## License
+
+See [`composer.json`](composer.json) for the package license.
