@@ -47,7 +47,7 @@ return [
 
     'middleware' => [
         'aliases' => [
-            // 'admin' => App\\Telegram\\Middleware\\IsAdmin::class,
+            // 'admin' => App\Telegram\Middleware\IsAdmin::class,
         ],
     ],
 
@@ -71,7 +71,7 @@ return [
     ],
 
     'exceptions' => [
-        'handler' => ReyhanTeam\\TelegramBotRouter\\Exceptions\\TelegramExceptionHandler::class,
+        'handler' => ReyhanTeam\TelegramBotRouter\Exceptions\TelegramExceptionHandler::class,
         'log_level' => env('TELEGRAM_EXCEPTION_LOG_LEVEL', 'error'),
     ],
 
