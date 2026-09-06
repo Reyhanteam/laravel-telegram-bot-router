@@ -166,6 +166,78 @@ final class Priority16FoundationTest extends TestCase
         $fake->assertApiCalledWith('sendMessage', [2001, 'Welcome!']);
     }
 
+    public function test_webhook_rejects_missing_secret_when_configured(): void
+    {
+        $fake = Telegram::fake();
+        config(['telegram-bot-router.webhook.secret_token' => 'correct-secret']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'));
+
+        $response->assertUnauthorized();
+        $response->assertJson(['error' => 'Unauthorized webhook request.']);
+        $fake->assertNoApiCall('sendMessage');
+    }
+
+    public function test_webhook_rejects_wrong_secret_when_configured(): void
+    {
+        $fake = Telegram::fake();
+        config(['telegram-bot-router.webhook.secret_token' => 'correct-secret']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'), [
+            'X-Telegram-Bot-Api-Secret-Token' => 'wrong-secret',
+        ]);
+
+        $response->assertUnauthorized();
+        $fake->assertNoApiCall('sendMessage');
+    }
+
+    public function test_webhook_accepts_valid_secret_when_configured(): void
+    {
+        $fake = Telegram::fake();
+        $fake->respond('sendMessage', ['message_id' => 10]);
+        TelegramTestController::$executed = false;
+        config(['telegram-bot-router.webhook.secret_token' => 'correct-secret']);
+        TelegramBot::onCommand('start', [TelegramTestController::class, 'start']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'), [
+            'X-Telegram-Bot-Api-Secret-Token' => 'correct-secret',
+        ]);
+
+        $response->assertOk();
+        $this->assertTrue(TelegramTestController::$executed);
+        $fake->assertMessageSent('Welcome!');
+    }
+
+    public function test_webhook_authentication_is_disabled_when_secret_is_empty(): void
+    {
+        $fake = Telegram::fake();
+        $fake->respond('sendMessage', ['message_id' => 10]);
+        TelegramTestController::$executed = false;
+        config(['telegram-bot-router.webhook.secret_token' => '']);
+        TelegramBot::onCommand('start', [TelegramTestController::class, 'start']);
+
+        $response = $this->postJson('/telegram/webhook', self::fakeMessage('/start'));
+
+        $response->assertOk();
+        $this->assertTrue(TelegramTestController::$executed);
+        $fake->assertMessageSent('Welcome!');
+    }
+
+    public function test_webhook_secret_failure_happens_before_update_processing(): void
+    {
+        Event::fake();
+        $fake = Telegram::fake();
+        config(['telegram-bot-router.webhook.secret_token' => 'correct-secret']);
+
+        $response = $this->postJson('/telegram/webhook', ['invalid' => 'payload'], [
+            'X-Telegram-Bot-Api-Secret-Token' => 'wrong-secret',
+        ]);
+
+        $response->assertUnauthorized();
+        Event::assertNotDispatched(UpdateReceived::class);
+        $fake->assertNoApiCall('sendMessage');
+    }
+
     public function test_webhook_http_request_dispatches_core_events_for_command(): void
     {
         Event::fake();
