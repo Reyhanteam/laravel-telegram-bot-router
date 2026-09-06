@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Queue;
 use Orchestra\Testbench\TestCase;
 use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
 use ReyhanTeam\TelegramBotRouter\Core\TelegramApiMethodRegistry;
@@ -14,8 +14,11 @@ use ReyhanTeam\TelegramBotRouter\Events\CommandReceived;
 use ReyhanTeam\TelegramBotRouter\Events\MessageReceived;
 use ReyhanTeam\TelegramBotRouter\Events\RouteMatched;
 use ReyhanTeam\TelegramBotRouter\Events\UpdateReceived;
+use ReyhanTeam\TelegramBotRouter\Jobs\ProcessTelegramUpdateJob;
 use ReyhanTeam\TelegramBotRouter\Keyboard\Keyboard;
+use ReyhanTeam\TelegramBotRouter\TelegramBot;
 use ReyhanTeam\TelegramBotRouter\TelegramRouterServiceProvider;
+use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 use Tests\Fixtures\TelegramTestController;
 
 final class Priority16FoundationTest extends TestCase
@@ -41,17 +44,20 @@ final class Priority16FoundationTest extends TestCase
         $this->assertSame('profile:42', $callback['callback_query']['data']);
         $this->assertSame(1001, self::fakeUser()['id']);
         $this->assertSame(2001, self::fakeChat()['id']);
+        $this->assertSame('/start', TelegramUpdate::fromArray($message)->message->text);
     }
 
     public function test_events_can_be_asserted_for_all_core_update_types(): void
     {
         Event::fake();
+        $message = TelegramUpdate::fromArray(self::fakeMessage('/start'));
+        $callback = TelegramUpdate::fromArray(self::fakeCallbackQuery('profile'));
 
-        event(new UpdateReceived(self::fakeMessage('/start')));
-        event(new MessageReceived(self::fakeMessage('hello')));
-        event(new CommandReceived(self::fakeMessage('/start')));
-        event(new CallbackQueryReceived(self::fakeCallbackQuery('profile')));
-        event(new RouteMatched('start', TelegramTestController::class . '@start'));
+        event(new UpdateReceived($message));
+        event(new MessageReceived($message));
+        event(new CommandReceived($message));
+        event(new CallbackQueryReceived($callback));
+        event(new RouteMatched($message, ['type' => 'command', 'pattern' => '/start']));
 
         Event::assertDispatched(UpdateReceived::class);
         Event::assertDispatched(MessageReceived::class);
@@ -60,12 +66,18 @@ final class Priority16FoundationTest extends TestCase
         Event::assertDispatched(RouteMatched::class);
     }
 
-    public function test_queue_fake_can_assert_package_jobs_are_dispatched(): void
+    public function test_queue_fake_can_assert_update_processing_job_is_dispatched(): void
     {
-        Queue::fake();
+        Bus::fake();
+        $job = new ProcessTelegramUpdateJob(self::fakeMessage('/start'), [
+            'type' => 'command',
+            'pattern' => '/start',
+            'callback' => [TelegramTestController::class, 'start'],
+        ]);
 
-        Queue::assertNothingPushed();
-        $this->assertTrue(true);
+        dispatch($job);
+
+        Bus::assertDispatched(ProcessTelegramUpdateJob::class);
     }
 
     public function test_keyboard_assertions_can_inspect_callbacks_and_markup(): void
@@ -93,6 +105,21 @@ final class Priority16FoundationTest extends TestCase
                 TelegramApiMethodRegistry::parameterNames($method)
             );
         }
+    }
+
+    public function test_route_builders_register_commands_text_callbacks_and_update_types(): void
+    {
+        TelegramBot::onCommand('start', [TelegramTestController::class, 'start'])->name('start');
+        TelegramBot::onText('hello', [TelegramTestController::class, 'start'])->name('hello');
+        TelegramBot::onCallbackQuery('profile:{id}', [TelegramTestController::class, 'start'])->name('profile');
+        TelegramBot::onInlineQuery(null, [TelegramTestController::class, 'start'])->name('inline');
+        TelegramBot::onEditedMessage(null, [TelegramTestController::class, 'start'])->name('edited');
+
+        $routes = TelegramBot::getRoutes();
+
+        $this->assertCount(5, $routes);
+        $this->assertSame('/start', TelegramBot::getRouteByName('start')['pattern']);
+        $this->assertSame('profile:{id}', TelegramBot::getRouteByName('profile')['pattern']);
     }
 
     /** @return array<string, mixed> */
