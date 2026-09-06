@@ -7,6 +7,13 @@ namespace ReyhanTeam\TelegramBotRouter\Testing;
 use PHPUnit\Framework\Assert;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
 
+/**
+ * In-memory Telegram API fake for PHPUnit/Laravel tests.
+ *
+ * It never performs an HTTP request. Every API call is recorded and can be
+ * inspected with assertions. Incoming Telegram updates can also be created
+ * through the small factory helpers below.
+ */
 final class TelegramFake
 {
     /** @var array<int, array{method: string, arguments: array<int|string, mixed>}> */
@@ -17,6 +24,9 @@ final class TelegramFake
 
     /** @var array<int, array<string, mixed>> */
     private array $updates = [];
+
+    /** @var array<int, string> */
+    private array $executedControllers = [];
 
     public function __call(string $method, array $arguments): mixed
     {
@@ -40,9 +50,61 @@ final class TelegramFake
         return TelegramUpdate::fromArray($update);
     }
 
+    /** @param array<string, mixed> $message */
+    public function receiveMessage(array $message): TelegramUpdate
+    {
+        return $this->receive([
+            'update_id' => count($this->updates) + 1,
+            'message' => $message,
+        ]);
+    }
+
+    public function command(string $command, array $overrides = []): TelegramUpdate
+    {
+        $message = array_replace_recursive($this->defaultMessage('/'.ltrim($command, '/')), $overrides);
+
+        return $this->receiveMessage($message);
+    }
+
+    public function message(string $text, array $overrides = []): TelegramUpdate
+    {
+        $message = array_replace_recursive($this->defaultMessage($text), $overrides);
+
+        return $this->receiveMessage($message);
+    }
+
+    public function callbackQuery(string $data, array $overrides = []): TelegramUpdate
+    {
+        $callback = array_replace_recursive([
+            'id' => 'callback-'.(count($this->updates) + 1),
+            'from' => $this->defaultUser(),
+            'message' => $this->defaultMessage('button'),
+            'chat_instance' => 'test-chat-instance',
+            'data' => $data,
+        ], $overrides);
+
+        return $this->receive([
+            'update_id' => count($this->updates) + 1,
+            'callback_query' => $callback,
+        ]);
+    }
+
+    /** @param array<string, mixed> $update */
+    public function update(array $update): TelegramUpdate
+    {
+        return $this->receive($update);
+    }
+
+    public function markControllerExecuted(string $controller, string $method): self
+    {
+        $this->executedControllers[] = $controller.'@'.$method;
+
+        return $this;
+    }
+
     public function assertApiCalled(string $method, ?callable $callback = null): void
     {
-        $calls = array_values(array_filter($this->calls, static fn (array $call): bool => $call['method'] === $method));
+        $calls = $this->callsFor($method);
         Assert::assertNotEmpty($calls, sprintf('Telegram API method [%s] was not called.', $method));
 
         if ($callback !== null) {
@@ -50,7 +112,7 @@ final class TelegramFake
         }
     }
 
-    /** @param array<int, mixed> $arguments */
+    /** @param array<int|string, mixed> $arguments */
     public function assertApiCalledWith(string $method, array $arguments): void
     {
         $this->assertApiCalled($method, static function (array $calls) use ($arguments): bool {
@@ -103,8 +165,10 @@ final class TelegramFake
     {
         $this->assertApiCalled('sendMessage', static function (array $calls) use ($text): bool {
             foreach ($calls as $call) {
-                if (($call['arguments'][1] ?? null) === $text || ($call['arguments']['text'] ?? null) === $text) {
-                    return true;
+                foreach ($call['arguments'] as $argument) {
+                    if ($argument === $text) {
+                        return true;
+                    }
                 }
             }
 
@@ -112,12 +176,12 @@ final class TelegramFake
         });
     }
 
+    /** @param array<string, mixed> $keyboard */
     public function assertKeyboardSent(array $keyboard): void
     {
         $this->assertApiCalled('sendMessage', static function (array $calls) use ($keyboard): bool {
             foreach ($calls as $call) {
-                $arguments = $call['arguments'];
-                if (($arguments['replyMarkup'] ?? $arguments['reply_markup'] ?? null) === $keyboard) {
+                if ($this->containsExactArray($call['arguments'], $keyboard)) {
                     return true;
                 }
             }
@@ -128,8 +192,16 @@ final class TelegramFake
 
     public function assertControllerExecuted(string $controller, string $method): void
     {
-        $key = $controller.'@'.$method;
-        $this->assertApiCalled('controller:'.$key);
+        Assert::assertContains(
+            $controller.'@'.$method,
+            $this->executedControllers,
+            sprintf('Controller [%s@%s] was not executed.', $controller, $method)
+        );
+    }
+
+    public function assertNoApiCall(string $method): void
+    {
+        Assert::assertCount(0, $this->callsFor($method), sprintf('Telegram API method [%s] was called.', $method));
     }
 
     /** @return array<int, array{method: string, arguments: array<int|string, mixed>}> */
@@ -142,5 +214,59 @@ final class TelegramFake
     public function updates(): array
     {
         return $this->updates;
+    }
+
+    /** @return array<int, array{method: string, arguments: array<int|string, mixed>}> */
+    private function callsFor(string $method): array
+    {
+        return array_values(array_filter(
+            $this->calls,
+            static fn (array $call): bool => $call['method'] === $method
+        ));
+    }
+
+    /** @param array<int|string, mixed> $haystack */
+    private function containsExactArray(array $haystack, array $needle): bool
+    {
+        foreach ($haystack as $value) {
+            if (is_array($value) && $value === $needle) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<string, mixed> */
+    private function defaultUser(): array
+    {
+        return [
+            'id' => 1001,
+            'is_bot' => false,
+            'first_name' => 'Test',
+            'username' => 'test_user',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function defaultChat(): array
+    {
+        return [
+            'id' => 2001,
+            'type' => 'private',
+            'first_name' => 'Test',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function defaultMessage(string $text): array
+    {
+        return [
+            'message_id' => 4001,
+            'from' => $this->defaultUser(),
+            'chat' => $this->defaultChat(),
+            'date' => 1700000000,
+            'text' => $text,
+        ];
     }
 }
