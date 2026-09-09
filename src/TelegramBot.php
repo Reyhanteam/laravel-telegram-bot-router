@@ -96,8 +96,44 @@ class TelegramBot
     public static function addRateLimit(int $routeIndex, string $scope, int $maxAttempts, int $decaySeconds): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); if (!in_array($scope, ['user', 'chat', 'command'], true)) throw new \InvalidArgumentException('Telegram rate limit scope must be user, chat, or command.'); static::$routes[$routeIndex]['rate_limits'][$scope] = ['enabled' => true, 'max_attempts' => max(1, $maxAttempts), 'decay_seconds' => max(1, $decaySeconds)]; }
     public static function addRateLimits(int $routeIndex, array $limits): void { foreach ($limits as $scope => $limit) { if (is_int($limit)) { static::addRateLimit($routeIndex, (string) $scope, $limit, 60); continue; } if (!is_array($limit)) throw new \InvalidArgumentException('Telegram rate limit configuration must be an integer or array.'); static::addRateLimit($routeIndex, (string) $scope, (int) ($limit['max_attempts'] ?? $limit['max'] ?? 60), (int) ($limit['decay_seconds'] ?? $limit['decay'] ?? 60)); } }
     public static function enableQueue(int $routeIndex, ?string $queue = null): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); static::$routes[$routeIndex]['queue'] = ['enabled' => true, 'queue' => $queue]; }
-    public static function nameRoute(int $routeIndex, string $name): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); $name = trim($name); if ($name === '') throw new \InvalidArgumentException('Telegram route name cannot be empty.'); foreach (static::$routes as $index => $route) if ($index !== $routeIndex && ($route['name'] ?? null) === $name) throw new \InvalidArgumentException(sprintf('Telegram route name [%s] is already in use.', $name)); static::$routes[$routeIndex]['name'] = $name; }
-    public static function getRouteByName(string $name): ?array { foreach (static::$routes as $route) if (($route['name'] ?? null) === $name) return $route; return null; }
+
+    public static function nameRoute(int $routeIndex, string $name): void
+    {
+        static::assertRoute($routeIndex);
+        $name = trim($name);
+        if ($name === '') throw new \InvalidArgumentException('Telegram route name cannot be empty.');
+        foreach (static::$routes as $index => $route) {
+            if ($index !== $routeIndex && !($route['internal'] ?? false) && ($route['name'] ?? null) === $name) {
+                throw new \InvalidArgumentException(sprintf('Telegram route name [%s] is already in use.', $name));
+            }
+        }
+
+        static::$routes[$routeIndex]['name'] = $name;
+        $aliasIndex = static::$routes[$routeIndex]['named_callback_alias'] ?? null;
+
+        if (is_int($aliasIndex) && isset(static::$routes[$aliasIndex])) {
+            static::$routes[$aliasIndex]['pattern'] = $name;
+            return;
+        }
+
+        static::$routes[] = [
+            'type' => 'callback_query',
+            'pattern' => $name,
+            'callback' => static::$routes[$routeIndex]['callback'],
+            'name' => null,
+            'middleware' => static::$routes[$routeIndex]['middleware'],
+            'constraints' => [],
+            'parameters' => [],
+            'rate_limits' => static::$routes[$routeIndex]['rate_limits'],
+            'queue' => static::$routes[$routeIndex]['queue'],
+            'internal' => true,
+            'named_callback_alias' => $routeIndex,
+        ];
+
+        static::$routes[$routeIndex]['named_callback_alias'] = count(static::$routes) - 1;
+    }
+
+    public static function getRouteByName(string $name): ?array { foreach (static::$routes as $route) if (!($route['internal'] ?? false) && ($route['name'] ?? null) === $name) return $route; return null; }
 
     public static function addUserCondition(int $routeIndex, int|string|array $userIds): void
     {
