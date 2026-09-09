@@ -94,6 +94,46 @@ The named route keeps its original middleware, rate-limit, and queue configurati
 
 An unknown route name is rejected when `Keyboard::routeName()` is called.
 
+## Direct Controller Method from Inline Keyboard
+
+A controller method can also be used directly without creating a route in `routes/bot.php` first.
+
+```php
+use App\Http\Controllers\TelegramTestController;
+use ReyhanTeam\TelegramBotRouter\Keyboard\Keyboard;
+
+$keyboard = Keyboard::inline()
+    ->callbackButton(
+        'تست ۵۵۵',
+        Keyboard::className(TelegramTestController::class, 'test555')
+    );
+```
+
+This means that pressing the button routes the callback query directly to:
+
+```php
+TelegramTestController::class
+```
+
+and calls:
+
+```php
+test555()
+```
+
+The controller method receives the complete `TelegramUpdate` in the `update` parameter, exactly like a controller action registered in `routes/bot.php`:
+
+```php
+public function test555($update)
+{
+    // Full Telegram update is available here.
+    $message = $update->message;
+    $callbackQuery = $update->callback_query;
+}
+```
+
+`Keyboard::className()` validates that the controller class exists and that the method is public before registering the callback target. The callback data is an opaque, deterministic token that stays within Telegram's 64-byte callback-data limit; the controller class and method are not exposed in the callback data.
+
 ## Inline Keyboard integration for callback routes
 
 Use a named callback route to generate callback data for an Inline Keyboard button:
