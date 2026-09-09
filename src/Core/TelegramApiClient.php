@@ -7,6 +7,8 @@ namespace ReyhanTeam\TelegramBotRouter\Core;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
+use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRateLimitException;
+use ReyhanTeam\TelegramBotRouter\RateLimiting\OutgoingTelegramRateLimiter;
 use ReyhanTeam\TelegramBotRouter\Response\TelegramResponse;
 use RuntimeException;
 
@@ -14,7 +16,8 @@ use RuntimeException;
  * Shared Telegram Bot API HTTP client.
  *
  * The method registry is the single source of truth for parameter order and
- * required/optional metadata. This class only normalizes developer arguments
+ * required/optional metadata. This class normalizes developer arguments,
+ * applies outgoing rate limiting, handles Telegram 429 retry_after responses,
  * and sends the request. It does not duplicate HTTP logic per Telegram method.
  */
 final class TelegramApiClient
@@ -23,6 +26,7 @@ final class TelegramApiClient
         private readonly ClientInterface $http,
         private readonly string $token,
         private readonly string $apiUrl = 'https://api.telegram.org',
+        private readonly ?OutgoingTelegramRateLimiter $rateLimiter = null,
     ) {
         if (trim($this->token) === '') {
             throw new RuntimeException('Telegram bot token is not configured.');
@@ -42,35 +46,58 @@ final class TelegramApiClient
 
         $url = rtrim($this->apiUrl, '/') . '/bot' . $this->token . '/' . $method;
         $options = $this->buildRequestOptions($parameters);
+        $retryCount = 0;
+        $maxRetries = $this->maxRetryAfterRetries();
 
-        try {
-            $response = $this->http->request('POST', $url, $options);
-            $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
-        } catch (GuzzleException $exception) {
-            throw new TelegramApiException(
-                sprintf('Telegram API request [%s] failed: %s', $method, $exception->getMessage()),
-                (int) $exception->getCode(),
-                [],
-                $exception,
-            );
-        } catch (\JsonException $exception) {
-            throw new TelegramApiException(
-                sprintf('Telegram API returned invalid JSON for [%s].', $method),
-                0,
-                [],
-                $exception,
-            );
-        }
+        while (true) {
+            $this->rateLimiter?->acquire('api');
 
-        if (($payload['ok'] ?? false) !== true) {
-            throw new TelegramApiException(
+            try {
+                $response = $this->http->request('POST', $url, $options);
+                $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+            } catch (GuzzleException $exception) {
+                throw new TelegramApiException(
+                    sprintf('Telegram API request [%s] failed: %s', $method, $exception->getMessage()),
+                    (int) $exception->getCode(),
+                    [],
+                    $exception,
+                );
+            } catch (\JsonException $exception) {
+                throw new TelegramApiException(
+                    sprintf('Telegram API returned invalid JSON for [%s].', $method),
+                    0,
+                    [],
+                    $exception,
+                );
+            }
+
+            if (($payload['ok'] ?? false) === true) {
+                return $payload['result'] ?? null;
+            }
+
+            $exception = new TelegramApiException(
                 (string) ($payload['description'] ?? sprintf('Telegram API method [%s] failed.', $method)),
                 (int) ($payload['error_code'] ?? 0),
                 is_array($payload['parameters'] ?? null) ? $payload['parameters'] : [],
             );
-        }
 
-        return $payload['result'] ?? null;
+            if (!$this->shouldRetryRateLimit($exception, $retryCount, $maxRetries)) {
+                throw $exception;
+            }
+
+            $delay = $this->retryDelay($exception, $retryCount);
+            $retryCount++;
+
+            if ($this->rateLimiter?->isQueueWorker() === true) {
+                throw new TelegramRateLimitException(
+                    sprintf('Telegram API rate limit reached for [%s]. Retry after %d second(s).', $method, $delay),
+                    $delay,
+                    $exception,
+                );
+            }
+
+            sleep($delay);
+        }
     }
 
     /**
@@ -136,6 +163,41 @@ final class TelegramApiClient
     private function isAssociative(array $value): bool
     {
         return array_keys($value) !== range(0, count($value) - 1);
+    }
+
+    private function shouldRetryRateLimit(TelegramApiException $exception, int $retryCount, int $maxRetries): bool
+    {
+        if (!$this->retryAfterEnabled() || $exception->getTelegramErrorCode() !== 429) {
+            return false;
+        }
+
+        return $retryCount < $maxRetries;
+    }
+
+    private function retryDelay(TelegramApiException $exception, int $retryCount): int
+    {
+        $retryAfter = $exception->getParameters()['retry_after'] ?? null;
+        if (is_numeric($retryAfter) && (int) $retryAfter > 0) {
+            return (int) $retryAfter;
+        }
+
+        $backoff = config('telegram-bot-router.outgoing_rate_limit.retry_after.backoff', [1, 2, 4]);
+        if (!is_array($backoff) || $backoff === []) {
+            return 1;
+        }
+
+        $index = min($retryCount, count($backoff) - 1);
+        return max(1, (int) $backoff[$index]);
+    }
+
+    private function retryAfterEnabled(): bool
+    {
+        return (bool) config('telegram-bot-router.outgoing_rate_limit.retry_after.enabled', true);
+    }
+
+    private function maxRetryAfterRetries(): int
+    {
+        return max(0, (int) config('telegram-bot-router.outgoing_rate_limit.retry_after.max_retries', 3));
     }
 
     /** @return array<string, mixed> */
