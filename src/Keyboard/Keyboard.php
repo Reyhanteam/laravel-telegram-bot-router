@@ -7,6 +7,7 @@ namespace ReyhanTeam\TelegramBotRouter\Keyboard;
 use Closure;
 use InvalidArgumentException;
 use JsonSerializable;
+use ReyhanTeam\TelegramBotRouter\TelegramBot;
 use Stringable;
 
 /**
@@ -72,6 +73,30 @@ final class Keyboard implements JsonSerializable, Stringable
         self::assertCallbackDataValue($data);
 
         return $data;
+    }
+
+    /**
+     * Generate callback data for a named Telegram route.
+     *
+     * The named route may be a command, text, callback-query, or another
+     * Telegram route. When the button is pressed, the router resolves the
+     * named route and executes its original Closure or controller action.
+     */
+    public static function routeName(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            throw new InvalidArgumentException('Telegram route name cannot be empty.');
+        }
+
+        if (TelegramBot::getRouteByName($name) === null) {
+            throw new InvalidArgumentException(sprintf('Telegram route [%s] was not found.', $name));
+        }
+
+        self::assertCallbackDataValue($name);
+
+        return $name;
     }
 
     public function button(string $text, ?string $value = null): self
