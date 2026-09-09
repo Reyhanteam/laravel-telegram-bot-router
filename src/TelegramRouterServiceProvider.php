@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ReyhanTeam\TelegramBotRouter;
 
 use GuzzleHttp\Client;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use ReyhanTeam\TelegramBotRouter\Console\SetPostRouteCommand;
@@ -12,6 +15,7 @@ use ReyhanTeam\TelegramBotRouter\Console\Commands\TelegramRouteClearCommand;
 use ReyhanTeam\TelegramBotRouter\Console\Commands\TelegramRouteListCommand;
 use ReyhanTeam\TelegramBotRouter\Core\TelegramApiClient;
 use ReyhanTeam\TelegramBotRouter\Core\UpdateManager;
+use ReyhanTeam\TelegramBotRouter\RateLimiting\OutgoingTelegramRateLimiter;
 
 class TelegramRouterServiceProvider extends ServiceProvider
 {
@@ -26,11 +30,19 @@ class TelegramRouterServiceProvider extends ServiceProvider
             return new TelegramRouter();
         });
 
-        $this->app->singleton(TelegramApiClient::class, function () {
+        $this->app->singleton(OutgoingTelegramRateLimiter::class, function ($app) {
+            return new OutgoingTelegramRateLimiter(
+                $app->make(RateLimiter::class),
+                (string) config('telegram-bot-router.token', ''),
+            );
+        });
+
+        $this->app->singleton(TelegramApiClient::class, function ($app) {
             return new TelegramApiClient(
                 new Client(),
                 (string) config('telegram-bot-router.token', ''),
                 (string) config('telegram-bot-router.polling.api_url', 'https://api.telegram.org'),
+                $app->make(OutgoingTelegramRateLimiter::class),
             );
         });
 
