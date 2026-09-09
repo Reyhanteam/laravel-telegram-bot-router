@@ -167,10 +167,10 @@ final class TestTelegramQueueJob extends TelegramQueueJob
         });
     }
 
-    public function fail(Throwable $exception = null): void
+    public function fail(?Throwable $exception = null): void
     {
         $this->failedImmediately = true;
-        parent::fail($exception);
+        $this->failed($exception ?? new RuntimeException('queue job failed'));
     }
 
     protected function queueContext(): array
