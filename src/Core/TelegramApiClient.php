@@ -7,6 +7,7 @@ namespace ReyhanTeam\TelegramBotRouter\Core;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramApiException;
+use ReyhanTeam\TelegramBotRouter\Response\TelegramResponse;
 use RuntimeException;
 
 /**
@@ -26,6 +27,11 @@ final class TelegramApiClient
         if (trim($this->token) === '') {
             throw new RuntimeException('Telegram bot token is not configured.');
         }
+    }
+
+    public function response(int|string|null $chatId = null): TelegramResponse
+    {
+        return new TelegramResponse($this, $chatId);
     }
 
     public function call(string $method, array $parameters = []): mixed
