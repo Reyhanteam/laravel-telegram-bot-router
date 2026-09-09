@@ -116,7 +116,7 @@
 
 ---
 
-## 7. Queue Reliability — 🟡
+## 7. Queue Reliability — ✅
 
 ### موجود
 
@@ -134,10 +134,14 @@
 - ✅ Failed-update persistence decision: Laravel `failed_jobs` is canonical; no duplicate package table
 - ✅ Failed-job inspection context in logs/events
 - ✅ Production queue documentation
-
-### باقی‌مانده
-
-- 🟡 Real Laravel queue worker verification in the consuming application
+- ✅ Real Laravel queue worker verification in the consuming application
+- ✅ Multiple real Telegram updates through Polling + Queue
+- ✅ Callback Query through Queue
+- ✅ Message route through Queue
+- ✅ Route-specific Queue
+- ✅ Non-retryable exception behavior
+- ✅ Retryable exception behavior
+- ✅ Deduplication behavior
 
 ### Queue reliability flow
 
@@ -161,7 +165,7 @@ worker retry
 
 ### Completion note
 
-Package-level Testbench coverage now verifies configuration, retry behavior, policy precedence, failed-job inspection context and queue dispatch. A real `queue:work` process depends on the consuming Laravel application's queue connection and process manager, so it remains an application-level verification step.
+Package-level Testbench coverage and real consuming-application worker verification have been completed. Queue dispatch, routing, retries, non-retryable failures, failed-job handling, route-specific queues and deduplication were verified in the Laravel test application.
 
 ## 8. Testing & Fake Telegram — 🟡
 
@@ -175,13 +179,27 @@ Package-level Testbench coverage now verifies configuration, retry behavior, pol
 - ✅ Controller execution coverage
 - ✅ Webhook and Callback Query integration foundations
 
+### Verified real Telegram API smoke tests
+
+The following developer-facing Bot API methods were tested successfully against the real Telegram test bot:
+
+- ✅ `getMe`
+- ✅ `logOut`
+- ✅ `close`
+- ✅ `sendMessage`
+- ✅ `sendMessageDraft`
+- ✅ `sendPhoto`
+- ✅ `sendAudio`
+- ✅ `sendDocument`
+- ✅ `sendVideo`
+- ✅ `sendAnimation`
+
 ### باقی‌مانده
 
 - 🟡 Webhook secret verification tests
 - 🟡 Full route-testing helpers
 - 🟡 Middleware integration coverage
 - 🟡 Conversation integration coverage
-- 🟡 Queue integration coverage
 - 🟡 Rate-limit integration coverage
 - 🟡 Invalid-update matrix
 - 🟡 Route parameter/constraint matrix
@@ -196,6 +214,7 @@ Package-level Testbench coverage now verifies configuration, retry behavior, pol
 - ✅ Telegram API client
 - ✅ API method registry
 - ✅ Developer-friendly API facade foundation
+- ✅ Real Telegram API smoke tests for `getMe`, `logOut`, `close`, `sendMessage`, `sendMessageDraft`, `sendPhoto`, `sendAudio`, `sendDocument`, `sendVideo`, and `sendAnimation`
 
 ### باقی‌مانده
 
@@ -250,7 +269,7 @@ Package-level Testbench coverage now verifies configuration, retry behavior, pol
 # 🟠 ترتیب Completion Gate
 
 1. Exception + Webhook Security — 🟡
-2. Queue Reliability — 🟡 (فقط worker واقعی باقی مانده)
+2. Queue Reliability — ✅
 3. Testing / Fake Telegram — 🟡
 4. Telegram Response API — 🟡
 5. Keyboard Completion — 🟡
@@ -419,7 +438,7 @@ Completion Gate
       ↓
 1. Exception + Webhook Security       ← CURRENT
       ↓
-2. Queue Reliability                  ← IMPLEMENTED; worker verification pending
+2. Queue Reliability                  ← COMPLETE
       ↓
 3. Testing / Fake Telegram
       ↓
@@ -432,4 +451,4 @@ Completion Gate
 Regex Callback Query Routing
 ```
 
-> Queue Reliability now has implementation, retry policy, failure inspection, automated package-level coverage and production documentation. The remaining step is to run a real Laravel `queue:work` worker in the consuming application and verify the end-to-end queue lifecycle.
+> Queue Reliability is complete at package and consuming-application verification level. Ten real Telegram Bot API methods have also been smoke-tested successfully in the Laravel test application.
