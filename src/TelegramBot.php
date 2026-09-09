@@ -135,7 +135,7 @@ class TelegramBot
 
     public static function getRouteByName(string $name): ?array { foreach (static::$routes as $route) if (!($route['internal'] ?? false) && ($route['name'] ?? null) === $name) return $route; return null; }
 
-    public static function addUserCondition(int|string|array $userIds): void
+    public static function addUserCondition(int $routeIndex, int|string|array $userIds): void
     {
         $ids = is_array($userIds) ? $userIds : [$userIds];
         if ($ids === []) throw new \InvalidArgumentException('Telegram user condition cannot be empty.');
