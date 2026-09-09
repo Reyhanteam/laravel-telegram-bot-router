@@ -99,6 +99,47 @@ final class Keyboard implements JsonSerializable, Stringable
         return $name;
     }
 
+    /**
+     * Register a controller method as a direct inline-keyboard callback target.
+     *
+     * The returned value is an opaque callback token. When Telegram sends the
+     * callback query, the router resolves the registered controller action and
+     * passes the complete TelegramUpdate to the controller method as `update`.
+     */
+    public static function className(string $class, string $method): string
+    {
+        $class = trim($class);
+        $method = trim($method);
+
+        if ($class === '') {
+            throw new InvalidArgumentException('Telegram controller class cannot be empty.');
+        }
+
+        if ($method === '') {
+            throw new InvalidArgumentException('Telegram controller method cannot be empty.');
+        }
+
+        if (!class_exists($class)) {
+            throw new InvalidArgumentException(sprintf('Telegram controller class [%s] was not found.', $class));
+        }
+
+        if (!method_exists($class, $method)) {
+            throw new InvalidArgumentException(sprintf('Telegram controller method [%s] was not found on [%s].', $method, $class));
+        }
+
+        $reflection = new \ReflectionMethod($class, $method);
+        if (!$reflection->isPublic()) {
+            throw new InvalidArgumentException(sprintf('Telegram controller method [%s] on [%s] must be public.', $method, $class));
+        }
+
+        $callbackData = 'reyhan:class:' . substr(hash('sha256', $class . '::' . $method), 0, 32);
+        self::assertCallbackDataValue($callbackData);
+
+        TelegramBot::onCallbackQuery($callbackData, [$class, $method]);
+
+        return $callbackData;
+    }
+
     public function button(string $text, ?string $value = null): self
     {
         $this->assertText($text);
