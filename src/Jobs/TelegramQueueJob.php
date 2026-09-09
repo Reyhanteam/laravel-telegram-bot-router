@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Events\TelegramJobFailed;
+use ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRateLimitException;
 use ReyhanTeam\TelegramBotRouter\Queue\TelegramQueueExceptionPolicy;
 use Throwable;
 
@@ -97,11 +98,21 @@ abstract class TelegramQueueJob implements ShouldQueue
             return $result;
         } catch (Throwable $exception) {
             $this->releaseDeduplication();
+
+            if ($exception instanceof TelegramRateLimitException) {
+                // Telegram's retry_after is more accurate than the generic
+                // queue backoff. Laravel will use this delay for the next try.
+                $this->backoff = max(1, $exception->getRetryAfter());
+            }
+
             Log::warning('Telegram queue job attempt failed.', [
                 'job' => static::class,
                 'attempts' => $this->attempts(),
                 ...$this->queueContext(),
                 'retryable' => app(TelegramQueueExceptionPolicy::class)->shouldRetry($exception),
+                'retry_after' => $exception instanceof TelegramRateLimitException
+                    ? $exception->getRetryAfter()
+                    : null,
                 'exception' => $exception,
             ]);
 
