@@ -28,6 +28,8 @@ routes/bot.php  -> Telegram bot routes
 - Admin/user/chat conditions and permissions
 - Telegram API client and developer-friendly API facade
 - Queued update processing with attempts, backoff, timeout and deduplication
+- Explicit retryable/non-retryable queue exception policy
+- `TelegramJobFailed` event and failure inspection context
 - Fake Telegram API and incoming-update testing helpers
 - Keyboard builder foundation
 - Webhook secret-token authentication
@@ -157,6 +159,10 @@ The package exposes the Telegram API through its developer-friendly facade. API 
 
 Updates can be processed through Laravel Queue with configurable connection, queue name, attempts, backoff, timeout and deduplication settings.
 
+Queue jobs also apply an explicit exception policy. Non-retryable exceptions can fail immediately. Failed jobs use Laravel's `failed_jobs` storage as the canonical persistence layer and emit `TelegramJobFailed` with inspection context.
+
+See [`docs/queue-reliability.md`](docs/queue-reliability.md) for retry policy, failed-job inspection, worker verification and production operation.
+
 ## Keyboard
 
 The keyboard builder supports Inline and Reply keyboards, callback/URL/WebApp/Login buttons, switch-inline buttons, rows, chaining, dynamic/conditional buttons, factories, callback-data helpers and validation.
@@ -176,6 +182,12 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_BOT_MODE=webhook
 TELEGRAM_WEBHOOK_PATH=/telegram/webhook
 TELEGRAM_WEBHOOK_SECRET_TOKEN=
+TELEGRAM_QUEUE_UPDATES=false
+TELEGRAM_QUEUE_CONNECTION=
+TELEGRAM_QUEUE_NAME=default
+TELEGRAM_QUEUE_TRIES=3
+TELEGRAM_QUEUE_BACKOFF=10,30,60
+TELEGRAM_QUEUE_TIMEOUT=120
 ```
 
 Never commit bot tokens or webhook secrets to source control.

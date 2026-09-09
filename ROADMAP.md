@@ -114,20 +114,6 @@
 - 🟡 Webhook verification test suite
 - 🟡 Final exception/security integration review
 
-### Security flow
-
-```text
-Telegram Webhook
-      ↓
-Secret Verification
-      ↓
- invalid → 401
-      ↓
- valid
-      ↓
-Parse Update → Router
-```
-
 ---
 
 ## 7. Queue Reliability — 🟡
@@ -142,15 +128,40 @@ Parse Update → Router
 - ✅ Failed-job hook
 - ✅ `TelegramJobFailed` event
 - ✅ Failure logging foundation
+- ✅ Retry behavior test coverage
+- ✅ Failed-job integration coverage
+- ✅ Explicit retryable / non-retryable exception policy
+- ✅ Failed-update persistence decision: Laravel `failed_jobs` is canonical; no duplicate package table
+- ✅ Failed-job inspection context in logs/events
+- ✅ Production queue documentation
 
 ### باقی‌مانده
 
-- 🟡 Retry behavior tests
-- 🟡 Failed-job integration tests
-- 🟡 Retryable / non-retryable exception policy
-- 🟡 Failed update persistence/inspection decision
-- 🟡 Real Laravel queue worker verification
-- 🟡 Production queue documentation
+- 🟡 Real Laravel queue worker verification in the consuming application
+
+### Queue reliability flow
+
+```text
+Telegram Update
+      ↓
+Laravel Queue
+      ↓
+TelegramQueueJob
+      ↓
+Exception Policy
+   ↙           ↘
+retry          fail immediately
+  ↓                 ↓
+Laravel attempts    failed_jobs
+  ↓                 ↓
+backoff             TelegramJobFailed
+  ↓
+worker retry
+```
+
+### Completion note
+
+Package-level Testbench coverage now verifies configuration, retry behavior, policy precedence, failed-job inspection context and queue dispatch. A real `queue:work` process depends on the consuming Laravel application's queue connection and process manager, so it remains an application-level verification step.
 
 ## 8. Testing & Fake Telegram — 🟡
 
@@ -239,7 +250,7 @@ Parse Update → Router
 # 🟠 ترتیب Completion Gate
 
 1. Exception + Webhook Security — 🟡
-2. Queue Reliability — 🟡
+2. Queue Reliability — 🟡 (فقط worker واقعی باقی مانده)
 3. Testing / Fake Telegram — 🟡
 4. Telegram Response API — 🟡
 5. Keyboard Completion — 🟡
@@ -261,6 +272,8 @@ Security / Reliability Review
 Documentation
    ↓
 Stable API
+   ↓
+Real Worker Verification
    ↓
 ✅ 100%
 ```
@@ -396,7 +409,6 @@ php artisan telegram:doctor
 - ⬜ Machine-readable examples
 - ⬜ Task recipes
 - ⬜ Troubleshooting knowledge base
-- ⬜ LLM-friendly architecture guide
 
 ---
 
@@ -407,7 +419,7 @@ Completion Gate
       ↓
 1. Exception + Webhook Security       ← CURRENT
       ↓
-2. Queue Reliability
+2. Queue Reliability                  ← IMPLEMENTED; worker verification pending
       ↓
 3. Testing / Fake Telegram
       ↓
@@ -420,4 +432,4 @@ Completion Gate
 Regex Callback Query Routing
 ```
 
-> Webhook authentication and the security policy/hardening documentation are now implemented. Their automated verification tests remain intentionally in the Testing Gate, so the next step is testing—not another new feature.
+> Queue Reliability now has implementation, retry policy, failure inspection, automated package-level coverage and production documentation. The remaining step is to run a real Laravel `queue:work` worker in the consuming application and verify the end-to-end queue lifecycle.

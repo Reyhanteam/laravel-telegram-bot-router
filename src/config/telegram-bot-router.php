@@ -39,6 +39,15 @@ return [
         'deduplicate_updates' => (bool) env('TELEGRAM_QUEUE_DEDUPLICATE_UPDATES', true),
         'deduplication_ttl' => (int) env('TELEGRAM_QUEUE_DEDUPLICATION_TTL', 86400),
         'cache_store' => env('TELEGRAM_QUEUE_CACHE_STORE', null),
+
+        // Non-retryable exceptions take precedence over retryable exceptions.
+        // An empty retryable list means all exceptions are retryable unless
+        // they are explicitly listed as non-retryable.
+        'retryable_exceptions' => [],
+        'non_retryable_exceptions' => [
+            ReyhanTeam\TelegramBotRouter\Exceptions\InvalidTelegramUpdateException::class,
+            ReyhanTeam\TelegramBotRouter\Exceptions\TelegramRouteException::class,
+        ],
     ],
 
     'route_cache' => [

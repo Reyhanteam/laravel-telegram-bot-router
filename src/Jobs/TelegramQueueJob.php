@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use ReyhanTeam\TelegramBotRouter\Events\TelegramJobFailed;
+use ReyhanTeam\TelegramBotRouter\Queue\TelegramQueueExceptionPolicy;
 use Throwable;
 
 abstract class TelegramQueueJob implements ShouldQueue
@@ -95,14 +96,19 @@ abstract class TelegramQueueJob implements ShouldQueue
 
             return $result;
         } catch (Throwable $exception) {
-            // A retry of this same job must be allowed to claim the update again.
             $this->releaseDeduplication();
             Log::warning('Telegram queue job attempt failed.', [
                 'job' => static::class,
                 'attempts' => $this->attempts(),
                 ...$this->queueContext(),
+                'retryable' => app(TelegramQueueExceptionPolicy::class)->shouldRetry($exception),
                 'exception' => $exception,
             ]);
+
+            if (!app(TelegramQueueExceptionPolicy::class)->shouldRetry($exception)) {
+                $this->fail($exception);
+                return null;
+            }
 
             throw $exception;
         }
