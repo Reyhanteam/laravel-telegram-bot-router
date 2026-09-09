@@ -9,6 +9,13 @@ use PHPUnit\Framework\TestCase;
 use ReyhanTeam\TelegramBotRouter\Keyboard\Keyboard;
 use ReyhanTeam\TelegramBotRouter\TelegramBot;
 
+final class KeyboardClassNameTestController
+{
+    public function test555($update): void
+    {
+    }
+}
+
 final class NamedRouteKeyboardTest extends TestCase
 {
     protected function setUp(): void
@@ -66,5 +73,47 @@ final class NamedRouteKeyboardTest extends TestCase
         $this->expectExceptionMessage('Telegram route name [start] is already in use.');
 
         TelegramBot::onCommand('profile', static fn () => null)->name('start');
+    }
+
+    public function test_keyboard_class_name_registers_controller_callback(): void
+    {
+        $callbackData = Keyboard::className(KeyboardClassNameTestController::class, 'test555');
+
+        $this->assertSame(45, strlen($callbackData));
+        $this->assertStringStartsWith('reyhan:class:', $callbackData);
+
+        $keyboard = Keyboard::inline()
+            ->callbackButton('تست ۵۵۵', $callbackData);
+
+        $this->assertSame(
+            $callbackData,
+            $keyboard->toArray()['inline_keyboard'][0][0]['callback_data']
+        );
+
+        $routes = TelegramBot::getRoutes();
+        $this->assertCount(1, $routes);
+        $this->assertSame('callback_query', $routes[0]['type']);
+        $this->assertSame($callbackData, $routes[0]['pattern']);
+        $this->assertSame(
+            [KeyboardClassNameTestController::class, 'test555'],
+            $routes[0]['callback']
+        );
+        $this->assertTrue($routes[0]['internal']);
+    }
+
+    public function test_keyboard_class_name_rejects_unknown_controller(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Telegram controller class [Tests\\Unit\\MissingController] was not found.');
+
+        Keyboard::className('Tests\\Unit\\MissingController', 'test555');
+    }
+
+    public function test_keyboard_class_name_rejects_unknown_method(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Telegram controller method [missing] was not found on [Tests\\Unit\\KeyboardClassNameTestController].');
+
+        Keyboard::className(KeyboardClassNameTestController::class, 'missing');
     }
 }
