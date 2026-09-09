@@ -19,9 +19,10 @@ class TelegramRouteListCommand extends Command
         }
 
         $rows = [];
-        foreach ($routes as $index => $route) {
+        $number = 1;
+        foreach ($routes as $route) {
             $rows[] = [
-                $index + 1,
+                $number++,
                 strtoupper((string) ($route['type'] ?? 'unknown')),
                 $this->pattern($route),
                 $this->name($route),
