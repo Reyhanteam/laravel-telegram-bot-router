@@ -255,14 +255,18 @@ The following developer-facing Bot API methods were tested successfully against 
 - ✅ Per-user / per-chat / per-command limits
 - ✅ Configurable limits
 - ✅ Laravel Cache / RateLimiter integration
+- ✅ Outgoing API throttling
+- ✅ Queue-aware throttling
+- ✅ Telegram `retry_after` handling
+- ✅ Backoff integration
 
 ### باقی‌مانده
 
-- 🟡 Outgoing API throttling
-- 🟡 Queue-aware throttling
-- 🟡 Telegram `retry_after` handling
-- 🟡 Backoff integration
 - 🟡 Tests / documentation
+
+### Implementation note
+
+Outgoing API calls now pass through a dedicated outgoing rate limiter. Normal application requests wait for an available slot. Queue workers do not block while waiting: they receive a retryable rate-limit exception, and `TelegramQueueJob` maps Telegram `retry_after` to Laravel queue backoff. Telegram HTTP `429` responses are also handled with `retry_after` precedence and configurable fallback backoff.
 
 ---
 
@@ -418,37 +422,3 @@ php artisan telegram:doctor
 - ⬜ Documentation website
 - ⬜ English / Persian documentation
 - ⬜ API reference
-- ⬜ Installation / webhook / polling / routing
-- ⬜ Middleware / conversations / queue / testing
-- ⬜ Keyboard / Response API
-- ⬜ Example applications
-
-## 31. AI-Friendly Documentation — ⬜
-- ⬜ Structured API reference
-- ⬜ Machine-readable examples
-- ⬜ Task recipes
-- ⬜ Troubleshooting knowledge base
-
----
-
-# 📍 CURRENT POSITION
-
-```text
-Completion Gate
-      ↓
-1. Exception + Webhook Security       ← CURRENT
-      ↓
-2. Queue Reliability                  ← COMPLETE
-      ↓
-3. Testing / Fake Telegram
-      ↓
-4. Response API
-      ↓
-5. Keyboard Completion
-      ↓
-6. Outgoing Rate Limiter
-      ↓
-Regex Callback Query Routing
-```
-
-> Queue Reliability is complete at package and consuming-application verification level. Ten real Telegram Bot API methods have also been smoke-tested successfully in the Laravel test application.
