@@ -135,7 +135,7 @@ class TelegramBot
 
     public static function getRouteByName(string $name): ?array { foreach (static::$routes as $route) if (!($route['internal'] ?? false) && ($route['name'] ?? null) === $name) return $route; return null; }
 
-    public static function addUserCondition(int $routeIndex, int|string|array $userIds): void
+    public static function addUserCondition(int|string|array $userIds): void
     {
         $ids = is_array($userIds) ? $userIds : [$userIds];
         if ($ids === []) throw new \InvalidArgumentException('Telegram user condition cannot be empty.');
@@ -170,7 +170,19 @@ class TelegramBot
     protected static function isRegexPattern(string $pattern): bool { if (strlen($pattern) < 3) return false; $delimiter = $pattern[0]; if (ctype_alnum($delimiter) || $delimiter === '\\') return false; $length = strlen($pattern); $escaped = false; for ($i = 1; $i < $length; $i++) { $char = $pattern[$i]; if ($escaped) { $escaped = false; continue; } if ($char === '\\') { $escaped = true; continue; } if ($char === $delimiter) { $modifiers = substr($pattern, $i + 1); return $modifiers === '' || preg_match('/^[a-zA-Z]*$/', $modifiers) === 1; } } return false; }
     protected static function getGroupMiddleware(array $middleware = []): array { $groupMiddleware = []; foreach (static::$middlewareGroupStack as $group) $groupMiddleware = array_merge($groupMiddleware, $group); return array_merge($groupMiddleware, $middleware); }
     public static function addConstraint(int $routeIndex, string $name, string $expression): void { if (!isset(static::$routes[$routeIndex])) throw new \OutOfBoundsException('Telegram route does not exist.'); static::$routes[$routeIndex]['constraints'][$name] = $expression; }
-    public static function getRoutes(): array { return static::$routes; }
+    public static function getRoutes(): array
+    {
+        foreach (static::$routes as $index => $route) {
+            if (!($route['internal'] ?? false)) continue;
+            $sourceIndex = $route['named_callback_alias'] ?? null;
+            if (!is_int($sourceIndex) || !isset(static::$routes[$sourceIndex])) continue;
+            static::$routes[$index]['callback'] = static::$routes[$sourceIndex]['callback'];
+            static::$routes[$index]['middleware'] = static::$routes[$sourceIndex]['middleware'];
+            static::$routes[$index]['rate_limits'] = static::$routes[$sourceIndex]['rate_limits'];
+            static::$routes[$index]['queue'] = static::$routes[$sourceIndex]['queue'];
+        }
+        return static::$routes;
+    }
     public static function getFallback(): ?callable { return static::$fallback; }
     public static function setApplication(Container $app): void { static::$app = $app; }
     public static function getApplication(): ?Container { return static::$app; }
