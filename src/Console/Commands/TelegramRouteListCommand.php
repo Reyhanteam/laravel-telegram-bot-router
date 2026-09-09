@@ -12,7 +12,7 @@ class TelegramRouteListCommand extends Command
 
     public function handle(): int
     {
-        $routes = TelegramBot::getRoutes();
+        $routes = array_filter(TelegramBot::getRoutes(), static fn (array $route): bool => !($route['internal'] ?? false));
         if ($routes === []) {
             $this->components->warn('No Telegram routes are registered.');
             return self::SUCCESS;
