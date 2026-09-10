@@ -51,9 +51,9 @@ Telegram Bot Router
 For example, you can define:
 
 ```php
-use ReyhanTeam\TelegramBotRouter\Facades\BOT;
+use ReyhanTeam\TelegramBotRouter\Facades\Route;
 
-BOT::onCommand('start', [StartController::class, 'index']);
+Route::onCommand('start', [StartController::class, 'index']);
 ```
 
 When a user sends:
@@ -107,25 +107,25 @@ The router supports more than simple commands.
 ### Commands
 
 ```php
-BOT::onCommand('start', [StartController::class, 'index']);
+Route::onCommand('start', [StartController::class, 'index']);
 ```
 
 ### Text messages
 
 ```php
-BOT::onText('hello', [MessageController::class, 'hello']);
+Route::onText('hello', [MessageController::class, 'hello']);
 ```
 
 ### Callback queries
 
 ```php
-BOT::onCallbackQuery([ProfileController::class, 'show']);
+Route::onCallbackQuery([ProfileController::class, 'show']);
 ```
 
 ### Route parameters
 
 ```php
-BOT::onCommand(
+Route::onCommand(
     'user {id}',
     [UserController::class, 'show']
 )->whereNumber('id');
@@ -153,9 +153,9 @@ A typical Telegram bot can contain many behaviors:
 The package lets you map these behaviors to dedicated controllers and methods.
 
 ```php
-BOT::onCommand('start', [StartController::class, 'index']);
-BOT::onCommand('help', [HelpController::class, 'index']);
-BOT::onCommand('profile', [ProfileController::class, 'show']);
+Route::onCommand('start', [StartController::class, 'index']);
+Route::onCommand('help', [HelpController::class, 'index']);
+Route::onCommand('profile', [ProfileController::class, 'show']);
 ```
 
 This keeps each part of the bot focused on one responsibility.
@@ -242,7 +242,7 @@ Your `routes/bot.php` definitions remain the same.
 Telegram routes can use middleware just like other Laravel application routes.
 
 ```php
-BOT::middleware([
+Route::middleware([
     CheckUser::class,
     IsAdmin::class,
 ])->onCommand(
@@ -280,7 +280,7 @@ Finish registration
 The package provides a conversation and state layer for these multi-step interactions.
 
 ```php
-BOT::conversation('register')
+Route::conversation('register')
     ->step([RegisterController::class, 'name'])
     ->step([RegisterController::class, 'phone'])
     ->startOnCommand('register');
@@ -430,11 +430,11 @@ A minimal bot can start with only a few routes:
 ```php
 use App\Http\Controllers\Telegram\HelpController;
 use App\Http\Controllers\Telegram\StartController;
-use ReyhanTeam\TelegramBotRouter\Facades\BOT;
+use ReyhanTeam\TelegramBotRouter\Facades\Route;
 
-BOT::onCommand('start', [StartController::class, 'index']);
-BOT::onCommand('help', [HelpController::class, 'index']);
-BOT::onText('hello', [StartController::class, 'hello']);
+Route::onCommand('start', [StartController::class, 'index']);
+Route::onCommand('help', [HelpController::class, 'index']);
+Route::onText('hello', [StartController::class, 'hello']);
 ```
 
 The application can then grow without turning the webhook handler into the center of the entire bot.
