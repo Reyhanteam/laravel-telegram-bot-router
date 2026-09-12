@@ -8,6 +8,7 @@ The goal is to finish the most important Core capabilities first, make the packa
 
 ---
 
+
 ## 🔴 Priority 14 — Advanced Callback Query Routing ⭐⭐⭐
 
 **First priority to implement.**
