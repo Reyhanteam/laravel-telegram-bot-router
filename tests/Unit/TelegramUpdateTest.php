@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
+use Orchestra\Testbench\TestCase;
 use ReyhanTeam\TelegramBotRouter\TelegramUpdate;
-use Tests\TestCase;
 
 class TelegramUpdateTest extends TestCase
 {
