@@ -171,31 +171,13 @@ class TelegramUpdate
 
     public function text()
     {
-        if (isset($this->message->text)) {
-            return $this->message->text;
-        }
-
-        if (isset($this->edited_message->text)) {
-            return $this->edited_message->text;
-        }
-
-        if (isset($this->channel_post->text)) {
-            return $this->channel_post->text;
-        }
-
-        if (isset($this->edited_channel_post->text)) {
-            return $this->edited_channel_post->text;
-        }
-
-        if (isset($this->inline_query->query)) {
-            return $this->inline_query->query;
-        }
-
-        if (isset($this->callback_query->data)) {
-            return $this->callback_query->data;
-        }
-
-        return null;
+        return $this->message->text
+            ?? $this->edited_message->text
+            ?? $this->channel_post->text
+            ?? $this->edited_channel_post->text
+            ?? $this->inline_query->query
+            ?? $this->callback_query->data
+            ?? null;
     }
 
     public function callbackQueryData(): ?string
